@@ -13,7 +13,7 @@ const env = (key) => {
   return ret;
 };
 
-const relative = (p) => path.join(__dirname, p);
+const relative = (p) => path.resolve(__dirname, p);
 
 const isDev = env('NODE_ENV') === 'development';
 const isProd = env('NODE_ENV') === 'production';
@@ -71,12 +71,8 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
-          {
-            loader: 'style-loader',
-          },
-          {
-            loader: 'css-loader',
-          },
+          'style-loader',
+          'css-loader',
         ],
       },
       {

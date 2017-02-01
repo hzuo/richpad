@@ -22,6 +22,8 @@
     "@types/react-redux": "^4.4.36",
     "@types/redux-logger": "^2.6.34",
     "draft-js": "^0.10.0",
+    "draft-js-mention-plugin": "beta",
+    "draft-js-plugins-editor": "beta",
     "immutable": "^3.8.1",
     "lodash": "^4.17.4",
     "normalize.css": "^5.0.0",
