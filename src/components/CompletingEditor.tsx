@@ -33,7 +33,11 @@ const mapDispatchToProps = (dispatch: Dispatch<State>): any => ({
   onChange: (editorState: EditorState) => dispatch(setEditorState(editorState)),
   onSearchChangePeople: (searchText: any) => dispatch(setSearchText("@", searchText.value)),
   onSearchChangeHashtags: (searchText: any) => dispatch(setSearchText("#", searchText.value)),
-  onSearchChangeRelations: (searchText: any) => dispatch(setSearchText("<>", searchText.value)),
+  onSearchChangeRelations: (searchText: any) => {
+    console.assert(searchText.value.charAt(0) === ">");
+    const mySearchText = searchText.value.substring(1);
+    dispatch(setSearchText("<>", mySearchText));
+  },
 });
 
 const mentionPluginPeople = createMentionPlugin({
@@ -49,9 +53,9 @@ const mentionPluginHashtags = createMentionPlugin({
 });
 const MentionSuggestionsHashtags = mentionPluginHashtags.MentionSuggestions;
 const mentionPluginRelations = createMentionPlugin({
-  mentionTrigger: ">",
+  mentionTrigger: "<>",
   mentionPrefix: "<>",
-  entityMutability: "MUTABLE",
+  entityMutability: "IMMUTABLE",
 });
 const MentionSuggestionsRelations = mentionPluginRelations.MentionSuggestions;
 const plugins = [mentionPluginPeople, mentionPluginHashtags, mentionPluginRelations];
