@@ -2,3 +2,7 @@
   border: 1px solid gray;
   padding: 10px;
 }
+
+.editor-container .active-process-marker {
+  border: 1px solid lightskyblue;
+}

@@ -84,7 +84,7 @@ const mkStrategyForMatchProcess = (matchProcess: MatchProcess) => (
 const mkActiveProcessMarker = (setActiveProcessClientRect: (clientRect: ClientRect) => void) => (
   class extends React.Component<{}, {}> {
     public render() {
-      return <span>{this.props.children}</span>;
+      return <span className="active-process-marker">{this.props.children}</span>;
     }
   }
 );
@@ -94,7 +94,7 @@ const SPECS = [
   mkDefaultSpec("@"),
   {
     trigger: "#",
-    beforeTriggerAllowed: /^|(.*\s)$/,
+    beforeTriggerAllowed: /(^|.*\s)$/,
     matchStringAllowed: /^[^\s]*$/,
   },
   mkDefaultSpec("<>"),
