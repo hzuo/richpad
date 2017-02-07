@@ -2,10 +2,6 @@ import {CompositeDecorator, ContentBlock, Editor, EditorState} from "draft-js";
 import * as _ from "lodash";
 import * as React from "react";
 
-interface CompletingEditorState {
-  currentEditorState: EditorState;
-}
-
 interface TriggerSpec {
   trigger: string;
   beforeTriggerAllowed: RegExp;
@@ -66,60 +62,57 @@ const getMatchProcessesForCurrentContentBlock = (triggerSpec: TriggerSpec) => (e
   return [];
 };
 
-const defaultSpec = (trigger: string): TriggerSpec => ({
+const mkDefaultSpec = (trigger: string): TriggerSpec => ({
   trigger,
   beforeTriggerAllowed: /(^|.*\s)$/,
   matchStringAllowed: /.*/,
 });
 
-const mkStrategyForMatchProcesses = (triggerSpec: TriggerSpec) => (editorState: EditorState) => {
-  const matchProcessesForCurrentBlock = getMatchProcessesForCurrentContentBlock(triggerSpec)(editorState);
-  const currentBlockKeys = _.uniqBy(_.map(matchProcessesForCurrentBlock, (x) => x.contentBlockKey), (x) => x);
-  console.assert(currentBlockKeys.length <= 1);
-  if (currentBlockKeys.length <= 0) {
-    return () => { ; };
-  } else {
-    const currentBlockKey = currentBlockKeys[0];
-    return (contentBlock: ContentBlock, callback: (start: number, end: number) => void): void => {
-      if (contentBlock.getKey() === currentBlockKey) {
-        // tslint:disable-next-line:no-shadowed-variable
-        for (const {triggerSpec, triggerOffset} of matchProcessesForCurrentBlock) {
-          const triggerStart = triggerOffset;
-          const triggerEnd = triggerStart + triggerSpec.trigger.length;
-          callback(triggerStart, triggerEnd);
-        }
-      }
-    };
-  }
-};
+const getActiveMatchProcess = (matchProcesses: MatchProcess[]): MatchProcess => (
+  _.maxBy(matchProcesses, (matchProcess) => matchProcess.triggerOffset)
+);
 
-const Completions = (triggerSpec: TriggerSpec) => {
-  const component: React.StatelessComponent<{}> = (props) => {
-    return (
-      <span>
-        {props.children}
-      </span>
-    );
-  };
-  return component;
-};
+const mkStrategyForMatchProcess = (matchProcess: MatchProcess) => (
+  (contentBlock: ContentBlock, callback: (start: number, end: number) => void): void => {
+    if (contentBlock.getKey() === matchProcess.contentBlockKey) {
+      const {triggerOffset, caretOffset} = matchProcess;
+      callback(triggerOffset, caretOffset);
+    }
+  }
+);
+
+const mkActiveProcessMarker = (setActiveProcessClientRect: (clientRect: ClientRect) => void) => (
+  class extends React.Component<{}, {}> {
+    public render() {
+      return <span>{this.props.children}</span>;
+    }
+  }
+);
 
 // TODO parameterize on this
 const SPECS = [
-  defaultSpec("@"),
+  mkDefaultSpec("@"),
   {
     trigger: "#",
     beforeTriggerAllowed: /^|(.*\s)$/,
     matchStringAllowed: /^[^\s]*$/,
   },
-  defaultSpec("<>"),
+  mkDefaultSpec("<>"),
 ];
+
+interface CompletingEditorState {
+  currentEditorState: EditorState;
+  activeMatchProcess: MatchProcess | null;
+  activeProcessClientRect: ClientRect | null;
+}
 
 export class CompletingEditor extends React.Component<{}, CompletingEditorState> {
   constructor() {
     super();
     this.state = {
       currentEditorState: EditorState.createEmpty(),
+      activeMatchProcess: null,
+      activeProcessClientRect: null,
     };
   }
 
@@ -145,15 +138,30 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
     );
   }
 
+  private setActiveProcessClientRect = (clientRect: ClientRect | null) => {
+    this.setState({
+      activeProcessClientRect: clientRect,
+    });
+  }
+
   private onEditorStateChange = (editorState: EditorState): void => {
-    const decorators = _.map(SPECS, (spec) => ({
-      strategy: mkStrategyForMatchProcesses(spec)(editorState),
-      component: Completions(spec),
-    }));
+    const decorators = [];
+    const matchProcesses = _.flatMap(SPECS, (triggerSpec) =>
+      getMatchProcessesForCurrentContentBlock(triggerSpec)(editorState),
+    );
+    const activeMatchProcess = _.isEmpty(matchProcesses) ? null : getActiveMatchProcess(matchProcesses);
+    if (activeMatchProcess !== null) {
+      const decoratorForActiveMatchProcess = {
+        strategy: mkStrategyForMatchProcess(activeMatchProcess),
+        component: mkActiveProcessMarker(this.setActiveProcessClientRect),
+      };
+      decorators.push(decoratorForActiveMatchProcess);
+    }
     const compositeDecorator = new CompositeDecorator(decorators);
     const decoratedEditorState = EditorState.set(editorState, {decorator: compositeDecorator});
     this.setState({
       currentEditorState: decoratedEditorState,
+      activeMatchProcess,
     });
   }
 }
