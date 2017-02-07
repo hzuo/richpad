@@ -92,11 +92,9 @@ const mkActiveProcessMarker = (setActiveProcessClientRect: (clientRect: ClientRe
 // TODO parameterize on this
 const SPECS = [
   mkDefaultSpec("@"),
-  {
-    trigger: "#",
-    beforeTriggerAllowed: /(^|.*\s)$/,
+  _.assign(mkDefaultSpec("#"), {
     matchStringAllowed: /^[^\s]*$/,
-  },
+  }),
   mkDefaultSpec("<>"),
 ];
 
