@@ -82,8 +82,11 @@ const mkStrategyForMatchProcesses = (triggerSpec: TriggerSpec) => (editorState: 
     const currentBlockKey = currentBlockKeys[0];
     return (contentBlock: ContentBlock, callback: (start: number, end: number) => void): void => {
       if (contentBlock.getKey() === currentBlockKey) {
-        for (const {triggerOffset, caretOffset} of matchProcessesForCurrentBlock) {
-          callback(triggerOffset, caretOffset);
+        // tslint:disable-next-line:no-shadowed-variable
+        for (const {triggerSpec, triggerOffset} of matchProcessesForCurrentBlock) {
+          const triggerStart = triggerOffset;
+          const triggerEnd = triggerStart + triggerSpec.trigger.length;
+          callback(triggerStart, triggerEnd);
         }
       }
     };
@@ -124,8 +127,8 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
     const editorState = this.state.currentEditorState;
     const selectionState = editorState.getSelection();
     const matchProcessesForSpecs = _.map(SPECS, (spec) => getMatchProcessesForCurrentContentBlock(spec)(editorState));
-    const printMatchProcesses = _.map(matchProcessesForSpecs, (matchProcessesForSpec) => (
-      <pre>
+    const printMatchProcesses = _.map(matchProcessesForSpecs, (matchProcessesForSpec, i) => (
+      <pre key={i}>
         {JSON.stringify(matchProcessesForSpec, null, 2)}
       </pre>
     ));
