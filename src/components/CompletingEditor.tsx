@@ -16,7 +16,7 @@ interface MatchProcess {
   contentBlockKey: string;
   triggerOffset: number;
   caretOffset: number;
-  value: string;
+  matchString: string;
 }
 
 const getMatchProcessesForTriggerSpec = (triggerSpec: TriggerSpec) => (editorState: EditorState): MatchProcess[] => {
@@ -47,7 +47,7 @@ const getMatchProcessesForTriggerSpec = (triggerSpec: TriggerSpec) => (editorSta
             contentBlockKey,
             caretOffset,
             triggerOffset: triggerStart,
-            value: afterTrigger,
+            matchString: afterTrigger,
           };
           matchProcesses.push(matchProcess);
         }
