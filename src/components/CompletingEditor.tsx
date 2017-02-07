@@ -1,6 +1,7 @@
 import {CompositeDecorator, ContentBlock, Editor, EditorState} from "draft-js";
 import * as _ from "lodash";
 import * as React from "react";
+import * as ReactDOM from "react-dom";
 
 interface TriggerSpec {
   trigger: string;
@@ -81,10 +82,41 @@ const mkStrategyForMatchProcess = (matchProcess: MatchProcess) => (
   }
 );
 
-const mkActiveProcessMarker = (setActiveProcessClientRect: (clientRect: ClientRect) => void) => (
+type ClientRectThunk = () => ClientRect | null;
+
+const mkActiveProcessMarker = (setActiveProcessClientRect: (clientRectThunk: ClientRectThunk) => void) => (
   class extends React.Component<{}, {}> {
+    private markerRef: React.ReactInstance;
+
+    public componentDidMount() {
+      setActiveProcessClientRect(() => {
+        if (this.markerRef) {
+          const markerElement = ReactDOM.findDOMNode(this.markerRef);
+          if (markerElement) {
+            return markerElement.getBoundingClientRect();
+          }
+        }
+        return null;
+      });
+    }
+
+    public componentWillUnmount() {
+      setActiveProcessClientRect(() => null);
+    }
+
     public render() {
-      return <span className="active-process-marker">{this.props.children}</span>;
+      return (
+        <span
+          className="active-process-marker"
+          ref={this.setMarkerRef}
+        >
+          {this.props.children}
+        </span>
+      );
+    }
+
+    private setMarkerRef = (marker: React.ReactInstance) => {
+      this.markerRef = marker;
     }
   }
 );
@@ -101,7 +133,7 @@ const SPECS = [
 interface CompletingEditorState {
   currentEditorState: EditorState;
   activeMatchProcess: MatchProcess | null;
-  activeProcessClientRect: ClientRect | null;
+  activeMatchProcessClientRectThunk: ClientRectThunk;
 }
 
 export class CompletingEditor extends React.Component<{}, CompletingEditorState> {
@@ -110,7 +142,7 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
     this.state = {
       currentEditorState: EditorState.createEmpty(),
       activeMatchProcess: null,
-      activeProcessClientRect: null,
+      activeMatchProcessClientRectThunk: () => null,
     };
   }
 
@@ -136,9 +168,9 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
     );
   }
 
-  private setActiveProcessClientRect = (clientRect: ClientRect | null) => {
+  private setActiveProcessClientRect = (clientRectThunk: ClientRectThunk) => {
     this.setState({
-      activeProcessClientRect: clientRect,
+      activeMatchProcessClientRectThunk: clientRectThunk,
     });
   }
 
