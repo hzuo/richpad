@@ -28,7 +28,7 @@ const getMatchStringForTriggerSpec = (triggerSpec: TriggerSpec) => (editorState:
     const contentBlock = contentState.getBlockForKey(contentBlockKey);
     const contentBlockText = contentBlock.getText();
     const triggerStart = contentBlockText.indexOf(triggerSpec.trigger);
-    if (triggerStart != -1) {
+    if (triggerStart !== -1) {
       const triggerEnd = triggerStart + triggerSpec.trigger.length;
       if (triggerEnd <= caretOffset) {
         const beforeTrigger = contentBlockText.slice(0, triggerStart);
@@ -39,7 +39,7 @@ const getMatchStringForTriggerSpec = (triggerSpec: TriggerSpec) => (editorState:
           return {
             triggerSpec, contentBlockKey, caretOffset,
             triggerOffset: triggerStart,
-            value: afterTrigger
+            value: afterTrigger,
           };
         }
       }
