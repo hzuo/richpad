@@ -11,7 +11,7 @@ interface TriggerSpec {
   afterTriggerAllowed: RegExp;
 }
 
-interface MatchString {
+interface MatchProcess {
   triggerSpec: TriggerSpec;
   contentBlockKey: string;
   triggerOffset: number;
@@ -19,7 +19,7 @@ interface MatchString {
   value: string;
 }
 
-const getMatchStringForTriggerSpec = (triggerSpec: TriggerSpec) => (editorState: EditorState): MatchString | null => {
+const getMatchProcessesForTriggerSpec = (triggerSpec: TriggerSpec) => (editorState: EditorState): MatchProcess[] => {
   const selectionState = editorState.getSelection();
   if (selectionState.isCollapsed()) {
     const contentBlockKey = selectionState.getStartKey();
@@ -27,31 +27,41 @@ const getMatchStringForTriggerSpec = (triggerSpec: TriggerSpec) => (editorState:
     const contentState = editorState.getCurrentContent();
     const contentBlock = contentState.getBlockForKey(contentBlockKey);
     const contentBlockText = contentBlock.getText();
-    const triggerStart = contentBlockText.indexOf(triggerSpec.trigger);
-    if (triggerStart !== -1) {
+
+    const matchProcesses: MatchProcess[] = [];
+    let cursor = 0;
+    while (true) {
+      const triggerStart = contentBlockText.indexOf(triggerSpec.trigger, cursor);
+      if (triggerStart === -1) {
+        return matchProcesses;
+      }
       const triggerEnd = triggerStart + triggerSpec.trigger.length;
       if (triggerEnd <= caretOffset) {
         const beforeTrigger = contentBlockText.slice(0, triggerStart);
         const afterTrigger = contentBlockText.slice(triggerEnd, caretOffset);
-        const beforeGood = triggerSpec.beforeTriggerAllowed.test(beforeTrigger);
-        const afterGood = triggerSpec.afterTriggerAllowed.test(afterTrigger);
+        const beforeGood = beforeTrigger.search(triggerSpec.beforeTriggerAllowed) !== -1;
+        const afterGood = afterTrigger.search(triggerSpec.afterTriggerAllowed) !== -1;
         if (beforeGood && afterGood) {
-          return {
-            triggerSpec, contentBlockKey, caretOffset,
+          const matchProcess = {
+            triggerSpec,
+            contentBlockKey,
+            caretOffset,
             triggerOffset: triggerStart,
             value: afterTrigger,
           };
+          matchProcesses.push(matchProcess);
         }
       }
+      cursor = triggerEnd;
     }
   }
-  return null;
+  return [];
 };
 
-const getMatchStringForTrigger = (trigger: string) => getMatchStringForTriggerSpec({
+const getMatchProcessesForTrigger = (trigger: string) => getMatchProcessesForTriggerSpec({
   trigger,
-  beforeTriggerAllowed: /(^|.*\s)$/g,
-  afterTriggerAllowed: /.*/g,
+  beforeTriggerAllowed: /(^|.*\s)$/,
+  afterTriggerAllowed: /.*/,
 });
 
 export class CompletingEditor extends React.Component<{}, CompletingEditorState> {
@@ -73,13 +83,13 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
           />
         </div>
         <div>
-          {JSON.stringify(getMatchStringForTrigger("@")(this.state.currentEditorState))}
+          {JSON.stringify(getMatchProcessesForTrigger("@")(this.state.currentEditorState))}
         </div>
         <div>
-          {JSON.stringify(getMatchStringForTrigger("#")(this.state.currentEditorState))}
+          {JSON.stringify(getMatchProcessesForTrigger("#")(this.state.currentEditorState))}
         </div>
         <div>
-          {JSON.stringify(getMatchStringForTrigger("<>")(this.state.currentEditorState))}
+          {JSON.stringify(getMatchProcessesForTrigger("<>")(this.state.currentEditorState))}
         </div>
       </div>
     );
