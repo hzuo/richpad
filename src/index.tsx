@@ -5,7 +5,7 @@ import {Provider} from "react-redux";
 import {applyMiddleware, createStore} from "redux";
 import * as createLogger from "redux-logger";
 
-import {CompletingEditor} from "./components/CompletingEditor";
+import {CompletingEditor, CompletionSpecs, mkDefaultSpec} from "./components/CompletingEditor";
 import {INITIAL_STATE} from "./state/initialState";
 import {rootReducer} from "./state/state";
 
@@ -20,9 +20,26 @@ if (__DEV__) {
 }
 const store = createStore(rootReducer, INITIAL_STATE, applyMiddleware(...middleware));
 
+const completionSpecs: CompletionSpecs = {
+  "mention": {
+    triggerSpec: mkDefaultSpec("@"),
+    completionItems: [],
+  },
+  "hashtag": {
+    triggerSpec: _.assign(mkDefaultSpec("#"), {
+      matchStringAllowed: /^[^\s]*$/,
+    }),
+    completionItems: [],
+  },
+  "relation": {
+    triggerSpec: mkDefaultSpec("<>"),
+    completionItems: [],
+  },
+};
+
 ReactDOM.render(
   <Provider store={store}>
-    <CompletingEditor />
+    <CompletingEditor completionSpecs={completionSpecs}/>
   </Provider>,
   document.getElementById("root"),
 );

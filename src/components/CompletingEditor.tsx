@@ -3,11 +3,17 @@ import * as _ from "lodash";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
-interface TriggerSpec {
+export interface TriggerSpec {
   trigger: string;
   beforeTriggerAllowed: RegExp;
   matchStringAllowed: RegExp;
 }
+
+export const mkDefaultSpec = (trigger: string): TriggerSpec => ({
+  trigger,
+  beforeTriggerAllowed: /(^|.*\s)$/,
+  matchStringAllowed: /.*/,
+});
 
 interface MatchProcess {
   triggerSpec: TriggerSpec;
@@ -62,12 +68,6 @@ const getMatchProcessesForCurrentContentBlock = (triggerSpec: TriggerSpec) => (e
   }
   return [];
 };
-
-const mkDefaultSpec = (trigger: string): TriggerSpec => ({
-  trigger,
-  beforeTriggerAllowed: /(^|.*\s)$/,
-  matchStringAllowed: /.*/,
-});
 
 const getActiveMatchProcess = (matchProcesses: MatchProcess[]): MatchProcess => (
   _.maxBy(matchProcesses, (matchProcess) => matchProcess.triggerOffset)
@@ -128,30 +128,51 @@ interface CompletionItem {
 interface CompletionsProps {
   completionItems: CompletionItem[];
   currentSelectionIndex: number;
+  activeMatchProcessClientRectThunk: ClientRectThunk;
 }
 
-const Completions: React.StatelessComponent<CompletionsProps> = (props) => {
-  return <div>hello world</div>;
+const Completions: React.StatelessComponent<CompletionsProps> = ({
+  completionItems,
+  currentSelectionIndex,
+  activeMatchProcessClientRectThunk,
+}) => {
+  const activeMatchProcessClientRect = activeMatchProcessClientRectThunk();
+  if (activeMatchProcessClientRect === null) {
+    return <noscript/>;
+  }
+  const style = {
+    backgroundColor: "gray",
+    position: "absolute",
+    top: activeMatchProcessClientRect.bottom,
+    left: activeMatchProcessClientRect.left,
+  };
+  return (
+    <div style={style}>hello world</div>
+  );
 };
 
-// TODO parameterize on this
-const MY_SPECS = [
-  mkDefaultSpec("@"),
-  _.assign(mkDefaultSpec("#"), {
-    matchStringAllowed: /^[^\s]*$/,
-  }),
-  mkDefaultSpec("<>"),
-];
+export interface CompletionSpec {
+  triggerSpec: TriggerSpec;
+  completionItems: CompletionItem[];
+}
 
-interface CompletingEditorState {
+export interface CompletionSpecs {
+  [key: string]: CompletionSpec;
+}
+
+export interface CompletingEditorProps {
+  completionSpecs: CompletionSpecs;
+}
+
+export interface CompletingEditorState {
   currentEditorState: EditorState;
   activeMatchProcess: MatchProcess | null;
   activeMatchProcessClientRectThunk: ClientRectThunk;
 }
 
-export class CompletingEditor extends React.Component<{}, CompletingEditorState> {
-  constructor() {
-    super();
+export class CompletingEditor extends React.Component<CompletingEditorProps, CompletingEditorState> {
+  constructor(props: CompletingEditorProps) {
+    super(props);
     this.state = {
       currentEditorState: EditorState.createEmpty(),
       activeMatchProcess: null,
@@ -163,7 +184,7 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
     const editorState = this.state.currentEditorState;
     const selectionState = editorState.getSelection();
     const matchProcessesForSpecs = _.map(
-      MY_SPECS,
+      this.getTriggerSpecs(),
       (spec) => getMatchProcessesForCurrentContentBlock(spec)(editorState),
     );
     const printMatchProcesses = _.map(matchProcessesForSpecs, (matchProcessesForSpec, i) => (
@@ -179,10 +200,19 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
             onChange={this.onEditorStateChange}
           />
         </div>
+        <Completions
+          completionItems={[]}
+          currentSelectionIndex={0}
+          activeMatchProcessClientRectThunk={this.state.activeMatchProcessClientRectThunk}
+        />
         {printMatchProcesses}
       </div>
     );
   }
+
+  private getTriggerSpecs = () => (
+    _.map(this.props.completionSpecs, (completionSpec) => completionSpec.triggerSpec)
+  )
 
   private setActiveProcessClientRect = (clientRectThunk: ClientRectThunk) => {
     this.setState({
@@ -193,7 +223,7 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
   private onEditorStateChange = (editorState: EditorState): void => {
     const decorators = [];
     const matchProcesses = _.flatMap(
-      MY_SPECS,
+      this.getTriggerSpecs(),
       (triggerSpec) => getMatchProcessesForCurrentContentBlock(triggerSpec)(editorState),
     );
     const activeMatchProcess = _.isEmpty(matchProcesses) ? null : getActiveMatchProcess(matchProcesses);
