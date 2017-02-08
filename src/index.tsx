@@ -21,17 +21,24 @@ if (__DEV__) {
 const store = createStore(rootReducer, INITIAL_STATE, applyMiddleware(...middleware));
 
 const completionSpecs: CompletionSpecs = {
-  "mention": {
+  mention: {
     triggerSpec: mkDefaultSpec("@"),
-    completionItems: [],
+    completionItems: [
+      {
+        text: "at1",
+      },
+      {
+        text: "at2",
+      },
+    ],
   },
-  "hashtag": {
+  hashtag: {
     triggerSpec: _.assign(mkDefaultSpec("#"), {
       matchStringAllowed: /^[^\s]*$/,
     }),
     completionItems: [],
   },
-  "relation": {
+  relation: {
     triggerSpec: mkDefaultSpec("<>"),
     completionItems: [],
   },

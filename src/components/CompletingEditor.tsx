@@ -166,10 +166,13 @@ class Completions extends React.Component<CompletionsProps, CompletionsState> {
       top: activeMatchProcessClientRect.bottom,
       left: activeMatchProcessClientRect.left,
     };
+    const completionItemElements = _.map(completionItems, (completionItem) => (
+      <div>{completionItem.text}</div>
+    ));
     return (
       <div style={style}>
         <div className="completions-container">
-          hello world
+          {completionItemElements}
         </div>
       </div>
     );
@@ -206,7 +209,8 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   }
 
   public render() {
-    const editorState = this.state.currentEditorState;
+    const {completionSpecs} = this.props;
+    const {currentEditorState: editorState, activeMatchProcess, activeMatchProcessClientRectThunk} = this.state;
     const selectionState = editorState.getSelection();
     const matchProcessesForSpecs = _.map(
       this.getTriggerSpecs(),
@@ -217,6 +221,25 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
         {JSON.stringify(matchProcessesForSpec, null, 2)}
       </pre>
     ));
+    const completionsElement = (() => {
+      if (activeMatchProcess) {
+        // TODO this info should be more easily derivable from activeMatchProcess
+        const activeCompletionSpec = _.find(
+          completionSpecs,
+          (completionSpec) => completionSpec.triggerSpec.trigger === activeMatchProcess.triggerSpec.trigger,
+        );
+        if (activeCompletionSpec !== undefined) {
+          return (
+            <Completions
+              completionItems={activeCompletionSpec.completionItems}
+              currentSelectionIndex={0} // TODO
+              activeMatchProcessClientRectThunk={activeMatchProcessClientRectThunk}
+            />
+          );
+        }
+      }
+      return null;
+    })();
     return (
       <div>
         <div className="editor-container">
@@ -225,19 +248,15 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
             onChange={this.onEditorStateChange}
           />
         </div>
-        <Completions
-          completionItems={[]}
-          currentSelectionIndex={0}
-          activeMatchProcessClientRectThunk={this.state.activeMatchProcessClientRectThunk}
-        />
+        {completionsElement}
         {printMatchProcesses}
       </div>
     );
   }
 
-  private getTriggerSpecs = () => (
-    _.map(this.props.completionSpecs, (completionSpec) => completionSpec.triggerSpec)
-  )
+  private getTriggerSpecs = () => {
+    return _.map(this.props.completionSpecs, (completionSpec) => completionSpec.triggerSpec);
+  }
 
   private setActiveProcessClientRect = (clientRectThunk: ClientRectThunk) => {
     this.setState({
