@@ -177,7 +177,7 @@ class Completions extends React.Component<CompletionsProps, CompletionsState> {
       return (
         <div className={`completion-item ${extraClassName}`} key={index}>
           <span className="completion-text">
-            { /* nbsp in case completionItem.text is empty */ }
+            {/* nbsp in case completionItem.text is empty */}
             &nbsp;{completionItem.text}&nbsp;
           </span>
         </div>
@@ -193,9 +193,14 @@ class Completions extends React.Component<CompletionsProps, CompletionsState> {
   }
 }
 
+// the draft typings don't export this type
+export type DraftEntityMutability = "MUTABLE" | "IMMUTABLE" | "SEGMENTED";
+
 export interface CompletionSpec {
   triggerSpec: TriggerSpec;
   completionItems: CompletionItem[];
+  entityType: string;
+  entityMutability: DraftEntityMutability;
 }
 
 export interface CompletionSpecs {
@@ -296,7 +301,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
         return _.startsWith(completionItem.text, activeMatchProcess.matchString);
       });
     }
-  };
+  }
 
   private setActiveProcessClientRect = (clientRectThunk: ClientRectThunk) => {
     this.setState({
@@ -356,8 +361,8 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   }
 
   private finishCompletion = () => {
-    
-  };
+    ;
+  }
 
   private onTab(e: React.KeyboardEvent<{}>) {
     // TODO

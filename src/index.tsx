@@ -1,4 +1,3 @@
-import * as _ from "lodash";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import {Provider} from "react-redux";
@@ -25,22 +24,30 @@ const completionSpecs: CompletionSpecs = {
     triggerSpec: mkDefaultSpec("@"),
     completionItems: [
       {
-        text: "at1",
+        text: "Jacob Cole",
       },
       {
-        text: "at2",
+        text: "Albert Slawinski",
       },
     ],
+    entityType: "mention",
+    entityMutability: "SEGMENTED",
   },
   hashtag: {
-    triggerSpec: _.assign(mkDefaultSpec("#"), {
-      matchStringAllowed: /^[^\s]*$/,
-    }),
+    triggerSpec: (() => {
+      const spec = mkDefaultSpec("#");
+      spec.matchStringAllowed = /^[^\s]*$/;
+      return spec;
+    })(),
     completionItems: [],
+    entityType: "hashtag",
+    entityMutability: "MUTABLE",
   },
   relation: {
     triggerSpec: mkDefaultSpec("<>"),
     completionItems: [],
+    entityType: "relation",
+    entityMutability: "IMMUTABLE",
   },
 };
 
