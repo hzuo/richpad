@@ -6,3 +6,7 @@
 .editor-container .active-process-marker {
   border: 1px solid lightskyblue;
 }
+
+.completions-container {
+  background-color: red;
+}

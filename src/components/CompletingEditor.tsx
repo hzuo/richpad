@@ -131,25 +131,50 @@ interface CompletionsProps {
   activeMatchProcessClientRectThunk: ClientRectThunk;
 }
 
-const Completions: React.StatelessComponent<CompletionsProps> = ({
-  completionItems,
-  currentSelectionIndex,
-  activeMatchProcessClientRectThunk,
-}) => {
-  const activeMatchProcessClientRect = activeMatchProcessClientRectThunk();
-  if (activeMatchProcessClientRect === null) {
-    return <noscript/>;
+interface CompletionsState {
+  activeMatchProcessClientRect: ClientRect | null;
+}
+
+class Completions extends React.Component<CompletionsProps, CompletionsState> {
+  constructor(props: CompletionsProps) {
+    super(props);
+    this.state = {
+      activeMatchProcessClientRect: this.props.activeMatchProcessClientRectThunk(),
+    };
   }
-  const style = {
-    backgroundColor: "gray",
-    position: "absolute",
-    top: activeMatchProcessClientRect.bottom,
-    left: activeMatchProcessClientRect.left,
-  };
-  return (
-    <div style={style}>hello world</div>
-  );
-};
+
+  public componentDidMount() {
+    this.setState({
+      activeMatchProcessClientRect: this.props.activeMatchProcessClientRectThunk(),
+    });
+  }
+
+  public componentWillReceiveProps(nextProps: CompletionsProps) {
+    this.setState({
+      activeMatchProcessClientRect: nextProps.activeMatchProcessClientRectThunk(),
+    });
+  }
+
+  public render() {
+    const {completionItems, currentSelectionIndex} = this.props;
+    const {activeMatchProcessClientRect} = this.state;
+    if (activeMatchProcessClientRect === null) {
+      return <noscript/>;
+    }
+    const style = {
+      position: "absolute",
+      top: activeMatchProcessClientRect.bottom,
+      left: activeMatchProcessClientRect.left,
+    };
+    return (
+      <div style={style}>
+        <div className="completions-container">
+          hello world
+        </div>
+      </div>
+    );
+  }
+}
 
 export interface CompletionSpec {
   triggerSpec: TriggerSpec;
