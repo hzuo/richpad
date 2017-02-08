@@ -121,8 +121,21 @@ const mkActiveProcessMarker = (setActiveProcessClientRect: (clientRectThunk: Cli
   }
 );
 
+interface CompletionItem {
+  text: string;
+}
+
+interface CompletionsProps {
+  completionItems: CompletionItem[];
+  currentSelectionIndex: number;
+}
+
+const Completions: React.StatelessComponent<CompletionsProps> = (props) => {
+  return <div>hello world</div>;
+};
+
 // TODO parameterize on this
-const SPECS = [
+const MY_SPECS = [
   mkDefaultSpec("@"),
   _.assign(mkDefaultSpec("#"), {
     matchStringAllowed: /^[^\s]*$/,
@@ -149,7 +162,10 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
   public render() {
     const editorState = this.state.currentEditorState;
     const selectionState = editorState.getSelection();
-    const matchProcessesForSpecs = _.map(SPECS, (spec) => getMatchProcessesForCurrentContentBlock(spec)(editorState));
+    const matchProcessesForSpecs = _.map(
+      MY_SPECS,
+      (spec) => getMatchProcessesForCurrentContentBlock(spec)(editorState),
+    );
     const printMatchProcesses = _.map(matchProcessesForSpecs, (matchProcessesForSpec, i) => (
       <pre key={i}>
         {JSON.stringify(matchProcessesForSpec, null, 2)}
@@ -176,8 +192,9 @@ export class CompletingEditor extends React.Component<{}, CompletingEditorState>
 
   private onEditorStateChange = (editorState: EditorState): void => {
     const decorators = [];
-    const matchProcesses = _.flatMap(SPECS, (triggerSpec) =>
-      getMatchProcessesForCurrentContentBlock(triggerSpec)(editorState),
+    const matchProcesses = _.flatMap(
+      MY_SPECS,
+      (triggerSpec) => getMatchProcessesForCurrentContentBlock(triggerSpec)(editorState),
     );
     const activeMatchProcess = _.isEmpty(matchProcesses) ? null : getActiveMatchProcess(matchProcesses);
     if (activeMatchProcess !== null) {
