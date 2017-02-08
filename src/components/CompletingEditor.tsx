@@ -229,19 +229,16 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     const {editorState, activeMatchProcess, activeMatchProcessClientRectThunk, selectedIndex} = this.state;
     const completionsElement = (() => {
       if (activeMatchProcess) {
-        const activeCompletionSpec = this.getActiveCompletionSpec();
-        if (activeCompletionSpec !== null) {
-          const completionItems = _.concat(activeCompletionSpec.completionItems, {
-            text: activeMatchProcess.matchString,
-          });
-          return (
-            <Completions
-              completionItems={completionItems}
-              selectedIndex={selectedIndex}
-              activeMatchProcessClientRectThunk={activeMatchProcessClientRectThunk}
-            />
-          );
-        }
+        const completionItems = _.concat(this.getMatchingCompletionItems(), {
+          text: activeMatchProcess.matchString,
+        });
+        return (
+          <Completions
+            completionItems={completionItems}
+            selectedIndex={selectedIndex}
+            activeMatchProcessClientRectThunk={activeMatchProcessClientRectThunk}
+          />
+        );
       }
       return null;
     })();
@@ -289,6 +286,18 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     return null;
   }
 
+  private getMatchingCompletionItems = () => {
+    const {activeMatchProcess} = this.state;
+    const activeCompletionSpec = this.getActiveCompletionSpec();
+    if (activeMatchProcess === null || activeCompletionSpec === null) {
+      return [];
+    } else {
+      return _.filter(activeCompletionSpec.completionItems, (completionItem) => {
+        return _.startsWith(completionItem.text, activeMatchProcess.matchString);
+      });
+    }
+  };
+
   private setActiveProcessClientRect = (clientRectThunk: ClientRectThunk) => {
     this.setState({
       activeMatchProcessClientRectThunk: clientRectThunk,
@@ -318,12 +327,8 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   }
 
   private isValidSelectIndex = (selectIndex: number) => {
-    const activeCompletionSpec = this.getActiveCompletionSpec();
-    if (activeCompletionSpec === null) {
-      return false;
-    } else {
-      return 0 <= selectIndex && selectIndex <= activeCompletionSpec.completionItems.length;
-    }
+    const matchingCompletionItems = this.getMatchingCompletionItems();
+    return 0 <= selectIndex && selectIndex <= matchingCompletionItems.length;
   }
 
   private onUpArrow = (e: React.KeyboardEvent<{}>) => {
