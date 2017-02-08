@@ -166,8 +166,10 @@ class Completions extends React.Component<CompletionsProps, CompletionsState> {
       top: activeMatchProcessClientRect.bottom,
       left: activeMatchProcessClientRect.left,
     };
-    const completionItemElements = _.map(completionItems, (completionItem) => (
-      <div>{completionItem.text}</div>
+    const completionItemElements = _.map(completionItems, (completionItem, index) => (
+      <div key={index}>
+        {completionItem.text}
+      </div>
     ));
     return (
       <div style={style}>
