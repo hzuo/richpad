@@ -177,7 +177,8 @@ class Completions extends React.Component<CompletionsProps, CompletionsState> {
       return (
         <div className={`completion-item ${extraClassName}`} key={index}>
           <span className="completion-text">
-            {completionItem.text}
+            { /* nbsp in case completionItem.text is empty */ }
+            &nbsp;{completionItem.text}&nbsp;
           </span>
         </div>
       );
@@ -226,24 +227,10 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   public render() {
     const {completionSpecs} = this.props;
     const {editorState, activeMatchProcess, activeMatchProcessClientRectThunk, selectedIndex} = this.state;
-    const selectionState = editorState.getSelection();
-    const matchProcessesForSpecs = _.map(
-      this.getTriggerSpecs(),
-      (spec) => getMatchProcessesForCurrentContentBlock(spec)(editorState),
-    );
-    const printMatchProcesses = _.map(matchProcessesForSpecs, (matchProcessesForSpec, i) => (
-      <pre key={i}>
-        {JSON.stringify(matchProcessesForSpec, null, 2)}
-      </pre>
-    ));
     const completionsElement = (() => {
       if (activeMatchProcess) {
-        // TODO this info should be more easily derivable from activeMatchProcess
-        const activeCompletionSpec = _.find(
-          completionSpecs,
-          (completionSpec) => completionSpec.triggerSpec.trigger === activeMatchProcess.triggerSpec.trigger,
-        );
-        if (activeCompletionSpec !== undefined) {
+        const activeCompletionSpec = this.getActiveCompletionSpec();
+        if (activeCompletionSpec !== null) {
           const completionItems = _.concat(activeCompletionSpec.completionItems, {
             text: activeMatchProcess.matchString,
           });
@@ -258,12 +245,23 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
       }
       return null;
     })();
+    const matchProcessesForSpecs = _.map(
+      this.getTriggerSpecs(),
+      (spec) => getMatchProcessesForCurrentContentBlock(spec)(editorState),
+    );
+    const printMatchProcesses = _.map(matchProcessesForSpecs, (matchProcessesForSpec, i) => (
+      <pre key={i}>
+        {JSON.stringify(matchProcessesForSpec, null, 2)}
+      </pre>
+    ));
     return (
       <div>
         <div className="editor-container">
           <Editor
             editorState={editorState}
             onChange={this.onEditorStateChange}
+            onUpArrow={this.onUpArrow}
+            onDownArrow={this.onDownArrow}
           />
         </div>
         {completionsElement}
@@ -274,6 +272,21 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
 
   private getTriggerSpecs = () => {
     return _.map(this.props.completionSpecs, (completionSpec) => completionSpec.triggerSpec);
+  }
+
+  private getActiveCompletionSpec = () => {
+    // TODO this info should be more easily derivable from activeMatchProcess
+    const {activeMatchProcess} = this.state;
+    if (activeMatchProcess !== null) {
+      const activeCompletionSpec = _.find(
+        this.props.completionSpecs,
+        (completionSpec) => completionSpec.triggerSpec.trigger === activeMatchProcess.triggerSpec.trigger,
+      );
+      if (activeCompletionSpec !== undefined) {
+        return activeCompletionSpec;
+      }
+    }
+    return null;
   }
 
   private setActiveProcessClientRect = (clientRectThunk: ClientRectThunk) => {
@@ -302,5 +315,38 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
       editorState: decoratedEditorState,
       activeMatchProcess,
     });
+  }
+
+  private isValidSelectIndex = (selectIndex: number) => {
+    const activeCompletionSpec = this.getActiveCompletionSpec();
+    if (activeCompletionSpec === null) {
+      return false;
+    } else {
+      return 0 <= selectIndex && selectIndex <= activeCompletionSpec.completionItems.length;
+    }
+  }
+
+  private onUpArrow = (e: React.KeyboardEvent<{}>) => {
+    e.preventDefault();
+    const trySelectIndex = this.state.selectedIndex - 1;
+    if (this.isValidSelectIndex(trySelectIndex)) {
+      this.setState({
+        selectedIndex: trySelectIndex,
+      });
+    }
+  }
+
+  private onDownArrow = (e: React.KeyboardEvent<{}>) => {
+    e.preventDefault();
+    const trySelectIndex = this.state.selectedIndex + 1;
+    if (this.isValidSelectIndex(trySelectIndex)) {
+      this.setState({
+        selectedIndex: trySelectIndex,
+      });
+    }
+  }
+
+  private onTab(e: React.KeyboardEvent<{}>) {
+    // TODO
   }
 }

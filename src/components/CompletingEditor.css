@@ -8,9 +8,9 @@
 }
 
 .completions-container {
-  background-color: red;
+  background-color: gray;
 }
 
 .completions-container .selected-item {
-  background-color: blue;
+  background-color: darkgray;
 }
