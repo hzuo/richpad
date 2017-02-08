@@ -332,24 +332,32 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   }
 
   private onUpArrow = (e: React.KeyboardEvent<{}>) => {
-    e.preventDefault();
-    const trySelectIndex = this.state.selectedIndex - 1;
-    if (this.isValidSelectIndex(trySelectIndex)) {
-      this.setState({
-        selectedIndex: trySelectIndex,
-      });
+    if (this.state.activeMatchProcess) {
+      e.preventDefault();
+      const trySelectIndex = this.state.selectedIndex - 1;
+      if (this.isValidSelectIndex(trySelectIndex)) {
+        this.setState({
+          selectedIndex: trySelectIndex,
+        });
+      }
     }
   }
 
   private onDownArrow = (e: React.KeyboardEvent<{}>) => {
-    e.preventDefault();
-    const trySelectIndex = this.state.selectedIndex + 1;
-    if (this.isValidSelectIndex(trySelectIndex)) {
-      this.setState({
-        selectedIndex: trySelectIndex,
-      });
+    if (this.state.activeMatchProcess) {
+      e.preventDefault();
+      const trySelectIndex = this.state.selectedIndex + 1;
+      if (this.isValidSelectIndex(trySelectIndex)) {
+        this.setState({
+          selectedIndex: trySelectIndex,
+        });
+      }
     }
   }
+
+  private finishCompletion = () => {
+    
+  };
 
   private onTab(e: React.KeyboardEvent<{}>) {
     // TODO
