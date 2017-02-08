@@ -10,3 +10,7 @@
 .completions-container {
   background-color: red;
 }
+
+.completions-container .selected-item {
+  background-color: blue;
+}

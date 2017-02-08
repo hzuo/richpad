@@ -127,7 +127,7 @@ interface CompletionItem {
 
 interface CompletionsProps {
   completionItems: CompletionItem[];
-  selectionIndex: number;
+  selectedIndex: number;
   activeMatchProcessClientRectThunk: ClientRectThunk;
 }
 
@@ -156,7 +156,7 @@ class Completions extends React.Component<CompletionsProps, CompletionsState> {
   }
 
   public render() {
-    const {completionItems, selectionIndex} = this.props;
+    const {completionItems, selectedIndex} = this.props;
     const {activeMatchProcessClientRect} = this.state;
     if (activeMatchProcessClientRect === null) {
       return <noscript/>;
@@ -166,11 +166,22 @@ class Completions extends React.Component<CompletionsProps, CompletionsState> {
       top: activeMatchProcessClientRect.bottom,
       left: activeMatchProcessClientRect.left,
     };
-    const completionItemElements = _.map(completionItems, (completionItem, index) => (
-      <div key={index}>
-        {completionItem.text}
-      </div>
-    ));
+    const completionItemElements = _.map(completionItems, (completionItem, index) => {
+      const extraClassName = (() => {
+        if (selectedIndex === index) {
+          return "selected-item";
+        } else {
+          return "";
+        }
+      })();
+      return (
+        <div className={`completion-item ${extraClassName}`} key={index}>
+          <span className="completion-text">
+            {completionItem.text}
+          </span>
+        </div>
+      );
+    });
     return (
       <div style={style}>
         <div className="completions-container">
@@ -198,7 +209,7 @@ export interface CompletingEditorState {
   editorState: EditorState;
   activeMatchProcess: MatchProcess | null;
   activeMatchProcessClientRectThunk: ClientRectThunk;
-  selectionIndex: number;
+  selectedIndex: number;
 }
 
 export class CompletingEditor extends React.Component<CompletingEditorProps, CompletingEditorState> {
@@ -208,13 +219,13 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
       editorState: EditorState.createEmpty(),
       activeMatchProcess: null,
       activeMatchProcessClientRectThunk: () => null,
-      selectionIndex: 0,
+      selectedIndex: 0,
     };
   }
 
   public render() {
     const {completionSpecs} = this.props;
-    const {editorState, activeMatchProcess, activeMatchProcessClientRectThunk, selectionIndex} = this.state;
+    const {editorState, activeMatchProcess, activeMatchProcessClientRectThunk, selectedIndex} = this.state;
     const selectionState = editorState.getSelection();
     const matchProcessesForSpecs = _.map(
       this.getTriggerSpecs(),
@@ -239,7 +250,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
           return (
             <Completions
               completionItems={completionItems}
-              selectionIndex={selectionIndex}
+              selectedIndex={selectedIndex}
               activeMatchProcessClientRectThunk={activeMatchProcessClientRectThunk}
             />
           );
