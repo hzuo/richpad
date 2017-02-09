@@ -1,4 +1,4 @@
-import {CompositeDecorator, ContentBlock, Editor, EditorState} from "draft-js";
+import {CompositeDecorator, ContentBlock, ContentState, Editor, EditorState, Modifier, SelectionState} from "draft-js";
 import * as _ from "lodash";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
@@ -84,12 +84,12 @@ const mkStrategyForMatchProcess = (matchProcess: MatchProcess) => (
 
 type ClientRectThunk = () => ClientRect | null;
 
-const mkActiveProcessMarker = (setActiveProcessClientRect: (clientRectThunk: ClientRectThunk) => void) => (
+const mkActiveProcessMarker = (setActiveProcessClientRectThunk: (clientRectThunk: ClientRectThunk) => void) => (
   class extends React.Component<{}, {}> {
     private markerRef: React.ReactInstance;
 
     public componentDidMount() {
-      setActiveProcessClientRect(() => {
+      setActiveProcessClientRectThunk(() => {
         if (this.markerRef) {
           const markerElement = ReactDOM.findDOMNode(this.markerRef);
           if (markerElement) {
@@ -101,7 +101,7 @@ const mkActiveProcessMarker = (setActiveProcessClientRect: (clientRectThunk: Cli
     }
 
     public componentWillUnmount() {
-      setActiveProcessClientRect(() => null);
+      setActiveProcessClientRectThunk(() => null);
     }
 
     public render() {
@@ -218,6 +218,55 @@ export interface CompletingEditorState {
   selectedIndex: number;
 }
 
+const getTriggerSpecs = (completionSpecs: CompletionSpecs): TriggerSpec[] => {
+  return _.map(completionSpecs, (completionSpec) => completionSpec.triggerSpec);
+};
+
+const getCompletionSpec = (
+  completionSpecs: CompletionSpecs,
+  matchProcess: MatchProcess | null,
+): CompletionSpec | null => {
+  // TODO this info should be more easily derivable from matchProcess
+  if (matchProcess !== null) {
+    const activeCompletionSpec = _.find(
+      completionSpecs,
+      (completionSpec) => completionSpec.triggerSpec.trigger === matchProcess.triggerSpec.trigger,
+    );
+    if (activeCompletionSpec !== undefined) {
+      return activeCompletionSpec;
+    }
+  }
+  return null;
+};
+
+const getMatchingCompletionItems = (
+  completionSpecs: CompletionSpecs,
+  matchProcess: MatchProcess | null,
+): CompletionItem[] => {
+  const completionSpec = getCompletionSpec(completionSpecs, matchProcess);
+  if (matchProcess !== null && completionSpec !== null) {
+    return _.filter(completionSpec.completionItems, (completionItem) => (
+      _.startsWith(_.toLower(completionItem.text), _.toLower(matchProcess.matchString))
+    ));
+  }
+  return [];
+};
+
+const boundSelectedIndex = (
+  completionSpecs: CompletionSpecs,
+  matchProcess: MatchProcess | null,
+  selectedIndex: number,
+): number => {
+  const matchingCompletionItems = getMatchingCompletionItems(completionSpecs, matchProcess);
+  if (selectedIndex < 0) {
+    return 0;
+  } else if (selectedIndex > matchingCompletionItems.length) {
+    return matchingCompletionItems.length;
+  } else {
+    return selectedIndex;
+  }
+};
+
 export class CompletingEditor extends React.Component<CompletingEditorProps, CompletingEditorState> {
   constructor(props: CompletingEditorProps) {
     super(props);
@@ -234,7 +283,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     const {editorState, activeMatchProcess, activeMatchProcessClientRectThunk, selectedIndex} = this.state;
     const completionsElement = (() => {
       if (activeMatchProcess) {
-        const completionItems = _.concat(this.getMatchingCompletionItems(), {
+        const completionItems = _.concat(getMatchingCompletionItems(this.props.completionSpecs, activeMatchProcess), {
           text: activeMatchProcess.matchString,
         });
         return (
@@ -248,7 +297,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
       return null;
     })();
     const matchProcessesForSpecs = _.map(
-      this.getTriggerSpecs(),
+      getTriggerSpecs(this.props.completionSpecs),
       (spec) => getMatchProcessesForCurrentContentBlock(spec)(editorState),
     );
     const printMatchProcesses = _.map(matchProcessesForSpecs, (matchProcessesForSpec, i) => (
@@ -272,38 +321,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     );
   }
 
-  private getTriggerSpecs = () => {
-    return _.map(this.props.completionSpecs, (completionSpec) => completionSpec.triggerSpec);
-  }
-
-  private getActiveCompletionSpec = () => {
-    // TODO this info should be more easily derivable from activeMatchProcess
-    const {activeMatchProcess} = this.state;
-    if (activeMatchProcess !== null) {
-      const activeCompletionSpec = _.find(
-        this.props.completionSpecs,
-        (completionSpec) => completionSpec.triggerSpec.trigger === activeMatchProcess.triggerSpec.trigger,
-      );
-      if (activeCompletionSpec !== undefined) {
-        return activeCompletionSpec;
-      }
-    }
-    return null;
-  }
-
-  private getMatchingCompletionItems = () => {
-    const {activeMatchProcess} = this.state;
-    const activeCompletionSpec = this.getActiveCompletionSpec();
-    if (activeMatchProcess === null || activeCompletionSpec === null) {
-      return [];
-    } else {
-      return _.filter(activeCompletionSpec.completionItems, (completionItem) => {
-        return _.startsWith(completionItem.text, activeMatchProcess.matchString);
-      });
-    }
-  }
-
-  private setActiveProcessClientRect = (clientRectThunk: ClientRectThunk) => {
+  private setActiveProcessClientRectThunk = (clientRectThunk: ClientRectThunk) => {
     this.setState({
       activeMatchProcessClientRectThunk: clientRectThunk,
     });
@@ -312,59 +330,89 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   private onEditorStateChange = (editorState: EditorState): void => {
     const decorators = [];
     const matchProcesses = _.flatMap(
-      this.getTriggerSpecs(),
+      getTriggerSpecs(this.props.completionSpecs),
       (triggerSpec) => getMatchProcessesForCurrentContentBlock(triggerSpec)(editorState),
     );
     const activeMatchProcess = _.isEmpty(matchProcesses) ? null : getActiveMatchProcess(matchProcesses);
     if (activeMatchProcess !== null) {
       const decoratorForActiveMatchProcess = {
         strategy: mkStrategyForMatchProcess(activeMatchProcess),
-        component: mkActiveProcessMarker(this.setActiveProcessClientRect),
+        component: mkActiveProcessMarker(this.setActiveProcessClientRectThunk),
       };
       decorators.push(decoratorForActiveMatchProcess);
     }
     const compositeDecorator = new CompositeDecorator(decorators);
     const decoratedEditorState = EditorState.set(editorState, {decorator: compositeDecorator});
+    const selectedIndex = activeMatchProcess === null ? 0 : boundSelectedIndex(
+      this.props.completionSpecs,
+      activeMatchProcess,
+      this.state.selectedIndex,
+    );
     this.setState({
       editorState: decoratedEditorState,
       activeMatchProcess,
+      selectedIndex,
     });
-  }
-
-  private isValidSelectIndex = (selectIndex: number) => {
-    const matchingCompletionItems = this.getMatchingCompletionItems();
-    return 0 <= selectIndex && selectIndex <= matchingCompletionItems.length;
   }
 
   private onUpArrow = (e: React.KeyboardEvent<{}>) => {
     if (this.state.activeMatchProcess) {
       e.preventDefault();
-      const trySelectIndex = this.state.selectedIndex - 1;
-      if (this.isValidSelectIndex(trySelectIndex)) {
-        this.setState({
-          selectedIndex: trySelectIndex,
-        });
-      }
+      this.setState({
+        selectedIndex: boundSelectedIndex(
+          this.props.completionSpecs,
+          this.state.activeMatchProcess,
+          this.state.selectedIndex - 1,
+        ),
+      });
     }
   }
 
   private onDownArrow = (e: React.KeyboardEvent<{}>) => {
     if (this.state.activeMatchProcess) {
       e.preventDefault();
-      const trySelectIndex = this.state.selectedIndex + 1;
-      if (this.isValidSelectIndex(trySelectIndex)) {
-        this.setState({
-          selectedIndex: trySelectIndex,
-        });
-      }
+      this.setState({
+        selectedIndex: boundSelectedIndex(
+          this.props.completionSpecs,
+          this.state.activeMatchProcess,
+          this.state.selectedIndex + 1,
+        ),
+      });
     }
   }
 
   private finishCompletion = () => {
-    ;
+    const {activeMatchProcess, editorState, selectedIndex} = this.state;
+    const activeCompletionSpec = getCompletionSpec(this.props.completionSpecs, activeMatchProcess);
+    if (activeMatchProcess !== null && activeCompletionSpec !== null) {
+      // TODO wtf these typings are messed up
+      const contentState = editorState.getCurrentContent();
+      const contentStateWithEntity: ContentState = (contentState as any).createEntity(
+        activeCompletionSpec.entityType,
+        activeCompletionSpec.entityMutability,
+      );
+      const entityKey: string = (contentStateWithEntity as any).getLastCreatedEntityKey();
+      const rangeToReplace = SelectionState.createEmpty(activeMatchProcess.contentBlockKey).merge({
+        anchorKey: activeMatchProcess.contentBlockKey,
+        anchorOffset: activeMatchProcess.triggerOffset,
+        focusKey: activeMatchProcess.contentBlockKey,
+        focusOffset: activeMatchProcess.caretOffset,
+      }) as SelectionState;
+      const text = activeCompletionSpec.completionItems[selectedIndex].text;
+      const contentStateWithCompletion = Modifier.replaceText(
+        contentStateWithEntity,
+        rangeToReplace,
+        text,
+      );
+      const newEditorState = EditorState.set(editorState, {currentContent: contentStateWithEntity});
+      this.onEditorStateChange(newEditorState);
+    }
   }
 
   private onTab(e: React.KeyboardEvent<{}>) {
-    // TODO
+    if (this.state.activeMatchProcess) {
+      e.preventDefault();
+      this.finishCompletion();
+    }
   }
 }
