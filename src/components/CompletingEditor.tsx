@@ -267,6 +267,39 @@ const boundSelectedIndex = (
   }
 };
 
+const finishCompletion = (
+  completionSpecs: CompletionSpecs,
+  matchProcess: MatchProcess | null,
+  selectedIndex: number,
+  editorState: EditorState,
+): EditorState | null => {
+  const completionSpec = getCompletionSpec(completionSpecs, matchProcess);
+  if (matchProcess !== null && completionSpec !== null) {
+    // TODO wtf these typings are messed up
+    const contentState = editorState.getCurrentContent();
+    const contentStateWithEntity: ContentState = (contentState as any).createEntity(
+      completionSpec.entityType,
+      completionSpec.entityMutability,
+    );
+    const entityKey: string = (contentStateWithEntity as any).getLastCreatedEntityKey();
+    const rangeToReplace = SelectionState.createEmpty(matchProcess.contentBlockKey).merge({
+      anchorKey: matchProcess.contentBlockKey,
+      anchorOffset: matchProcess.triggerOffset,
+      focusKey: matchProcess.contentBlockKey,
+      focusOffset: matchProcess.caretOffset,
+    }) as SelectionState;
+    const text = completionSpec.completionItems[selectedIndex].text;
+    const contentStateWithCompletion = Modifier.replaceText(
+      contentStateWithEntity,
+      rangeToReplace,
+      text,
+    );
+    const newEditorState = EditorState.set(editorState, {currentContent: contentStateWithCompletion});
+    return newEditorState;
+  }
+  return null;
+};
+
 export class CompletingEditor extends React.Component<CompletingEditorProps, CompletingEditorState> {
   constructor(props: CompletingEditorProps) {
     super(props);
@@ -313,6 +346,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
             onChange={this.onEditorStateChange}
             onUpArrow={this.onUpArrow}
             onDownArrow={this.onDownArrow}
+            onTab={this.onTab}
           />
         </div>
         {completionsElement}
@@ -381,38 +415,18 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     }
   }
 
-  private finishCompletion = () => {
-    const {activeMatchProcess, editorState, selectedIndex} = this.state;
-    const activeCompletionSpec = getCompletionSpec(this.props.completionSpecs, activeMatchProcess);
-    if (activeMatchProcess !== null && activeCompletionSpec !== null) {
-      // TODO wtf these typings are messed up
-      const contentState = editorState.getCurrentContent();
-      const contentStateWithEntity: ContentState = (contentState as any).createEntity(
-        activeCompletionSpec.entityType,
-        activeCompletionSpec.entityMutability,
-      );
-      const entityKey: string = (contentStateWithEntity as any).getLastCreatedEntityKey();
-      const rangeToReplace = SelectionState.createEmpty(activeMatchProcess.contentBlockKey).merge({
-        anchorKey: activeMatchProcess.contentBlockKey,
-        anchorOffset: activeMatchProcess.triggerOffset,
-        focusKey: activeMatchProcess.contentBlockKey,
-        focusOffset: activeMatchProcess.caretOffset,
-      }) as SelectionState;
-      const text = activeCompletionSpec.completionItems[selectedIndex].text;
-      const contentStateWithCompletion = Modifier.replaceText(
-        contentStateWithEntity,
-        rangeToReplace,
-        text,
-      );
-      const newEditorState = EditorState.set(editorState, {currentContent: contentStateWithEntity});
-      this.onEditorStateChange(newEditorState);
-    }
-  }
-
-  private onTab(e: React.KeyboardEvent<{}>) {
+  private onTab = (e: React.KeyboardEvent<{}>) => {
     if (this.state.activeMatchProcess) {
       e.preventDefault();
-      this.finishCompletion();
+      const newEditorState = finishCompletion(
+        this.props.completionSpecs,
+        this.state.activeMatchProcess,
+        this.state.selectedIndex,
+        this.state.editorState,
+      );
+      if (newEditorState !== null) {
+        this.onEditorStateChange(newEditorState);
+      }
     }
   }
 }
