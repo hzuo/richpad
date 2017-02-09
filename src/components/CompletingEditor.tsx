@@ -245,9 +245,12 @@ const getMatchingCompletionItems = (
 ): CompletionItem[] => {
   const completionSpec = getCompletionSpec(completionSpecs, matchProcess);
   if (matchProcess !== null && completionSpec !== null) {
-    return _.filter(completionSpec.completionItems, (completionItem) => (
+    const matchingCompletionItems = _.filter(completionSpec.completionItems, (completionItem) => (
       _.startsWith(_.toLower(completionItem.text), _.toLower(matchProcess.matchString))
     ));
+    return _.concat(matchingCompletionItems, {
+      text: matchProcess.matchString,
+    });
   }
   return [];
 };
@@ -260,8 +263,8 @@ const boundSelectedIndex = (
   const matchingCompletionItems = getMatchingCompletionItems(completionSpecs, matchProcess);
   if (selectedIndex < 0) {
     return 0;
-  } else if (selectedIndex > matchingCompletionItems.length) {
-    return matchingCompletionItems.length;
+  } else if (selectedIndex > matchingCompletionItems.length - 1) {
+    return matchingCompletionItems.length - 1;
   } else {
     return selectedIndex;
   }
@@ -286,7 +289,8 @@ const finishCompletion = (
       anchorOffset: matchProcess.triggerOffset,
       focusOffset: matchProcess.caretOffset,
     }) as SelectionState;
-    const text = completionSpec.completionItems[selectedIndex].text;
+    const matchingCompletionItems = getMatchingCompletionItems(completionSpecs, matchProcess);
+    const text = matchingCompletionItems[selectedIndex].text;
     const contentStateWithCompletion = Modifier.replaceText(
       contentStateWithEntity,
       rangeToReplace,
@@ -317,12 +321,10 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     const {editorState, activeMatchProcess, activeMatchProcessClientRectThunk, selectedIndex} = this.state;
     const completionsElement = (() => {
       if (activeMatchProcess) {
-        const completionItems = _.concat(getMatchingCompletionItems(this.props.completionSpecs, activeMatchProcess), {
-          text: activeMatchProcess.matchString,
-        });
+        const matchingCompletionItems = getMatchingCompletionItems(this.props.completionSpecs, activeMatchProcess);
         return (
           <Completions
-            completionItems={completionItems}
+            completionItems={matchingCompletionItems}
             selectedIndex={selectedIndex}
             activeMatchProcessClientRectThunk={activeMatchProcessClientRectThunk}
           />
