@@ -224,8 +224,9 @@ const EntityMarker: React.StatelessComponent<{}> = (props) => (
   <span className="entity-marker">{props.children}</span>
 );
 
-// the draft typings don't export this type
+// the draft typings don't export these types
 export type DraftEntityMutability = "MUTABLE" | "IMMUTABLE" | "SEGMENTED";
+type DraftHandleValue = "handled" | "not-handled";
 
 export interface CompletionSpec {
   triggerSpec: TriggerSpec;
@@ -329,8 +330,21 @@ const finishCompletion = (
       undefined,
       entityKey,
     );
-    const editorState1 = EditorState.set(editorState, {currentContent: contentStateWithCompletion});
-    const editorState2 = EditorState.forceSelection(editorState1, contentStateWithCompletion.getSelectionAfter());
+    // TODO better way to "not continue" a mutable entity?
+    const contentStateWithBoundary = (() => {
+      if (completionSpec.entityMutability === "MUTABLE") {
+        return Modifier.insertText(
+          contentStateWithCompletion,
+          contentStateWithCompletion.getSelectionAfter(),
+          "\u200B",
+        );
+      } else {
+        return contentStateWithCompletion;
+      }
+    })();
+    // TODO use EditorState.push
+    const editorState1 = EditorState.set(editorState, {currentContent: contentStateWithBoundary});
+    const editorState2 = EditorState.forceSelection(editorState1, contentStateWithBoundary.getSelectionAfter());
     return editorState2;
   }
   return null;
@@ -381,6 +395,8 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
             onUpArrow={this.onUpArrow}
             onDownArrow={this.onDownArrow}
             onTab={this.onTab}
+            handleReturn={this.handleReturn}
+            handleBeforeInput={this.handleBeforeInput}
           />
         </div>
         {completionsElement}
@@ -450,9 +466,8 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     }
   }
 
-  private onTab = (e: React.KeyboardEvent<{}>) => {
+  private handleReturn = (e: React.KeyboardEvent<{}>): DraftHandleValue => {
     if (this.state.activeMatchProcess) {
-      e.preventDefault();
       const newEditorState = finishCompletion(
         this.props.completionSpecs,
         this.state.activeMatchProcess,
@@ -460,9 +475,44 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
         this.state.editorState,
       );
       if (newEditorState !== null) {
+        e.preventDefault();
         this.onEditorStateChange(newEditorState);
+        return "handled";
       }
     }
+    return "not-handled";
+  }
+
+  private onTab = (e: React.KeyboardEvent<{}>) => {
+    this.handleReturn(e);
+  }
+
+  // TODO this is currently special-casing hashtag, make it generally configurable
+  private handleBeforeInput = (chars: string): DraftHandleValue => {
+    if (chars === " ") {
+      const activeCompletionSpec = getCompletionSpec(this.props.completionSpecs, this.state.activeMatchProcess);
+      if (activeCompletionSpec !== null && activeCompletionSpec.entityType === "hashtag") {
+        const editorState1 = finishCompletion(
+          this.props.completionSpecs,
+          this.state.activeMatchProcess,
+          this.state.selectedIndex,
+          this.state.editorState,
+        );
+        if (editorState1 !== null) {
+          const contentStateWithAppendedSpace = Modifier.insertText(
+            editorState1.getCurrentContent(),
+            editorState1.getSelection(),
+            " ",
+          );
+          const editorState2 = EditorState.set(editorState1, {currentContent: contentStateWithAppendedSpace});
+          const afterSpaceSelection = contentStateWithAppendedSpace.getSelectionAfter();
+          const editorState3 = EditorState.forceSelection(editorState2, afterSpaceSelection);
+          this.onEditorStateChange(editorState3);
+          return "handled";
+        }
+      }
+    }
+    return "not-handled";
   }
 
   private setActiveProcessClientRectThunk = (clientRectThunk: ClientRectThunk) => {
