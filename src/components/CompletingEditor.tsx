@@ -283,9 +283,7 @@ const finishCompletion = (
     );
     const entityKey: string = (contentStateWithEntity as any).getLastCreatedEntityKey();
     const rangeToReplace = SelectionState.createEmpty(matchProcess.contentBlockKey).merge({
-      anchorKey: matchProcess.contentBlockKey,
       anchorOffset: matchProcess.triggerOffset,
-      focusKey: matchProcess.contentBlockKey,
       focusOffset: matchProcess.caretOffset,
     }) as SelectionState;
     const text = completionSpec.completionItems[selectedIndex].text;
@@ -296,8 +294,9 @@ const finishCompletion = (
       undefined,
       entityKey,
     );
-    const newEditorState = EditorState.set(editorState, {currentContent: contentStateWithCompletion});
-    return newEditorState;
+    const editorState1 = EditorState.set(editorState, {currentContent: contentStateWithCompletion});
+    const editorState2 = EditorState.forceSelection(editorState1, contentStateWithCompletion.getSelectionAfter());
+    return editorState2;
   }
   return null;
 };
