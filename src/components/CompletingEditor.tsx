@@ -293,6 +293,8 @@ const finishCompletion = (
       contentStateWithEntity,
       rangeToReplace,
       text,
+      undefined,
+      entityKey,
     );
     const newEditorState = EditorState.set(editorState, {currentContent: contentStateWithCompletion});
     return newEditorState;
