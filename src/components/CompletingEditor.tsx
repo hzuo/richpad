@@ -360,7 +360,7 @@ const finishCompletion = (
         return contentStateWithCompletion;
       }
     })();
-    // TODO use EditorState.push
+    // TODO use EditorState.push for better undo/redo UX
     const editorState1 = EditorState.set(editorState, {currentContent: contentStateWithBoundary});
     const editorState2 = EditorState.forceSelection(editorState1, contentStateWithBoundary.getSelectionAfter());
     return editorState2;
