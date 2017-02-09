@@ -37,10 +37,11 @@ interface MatchProcess {
 const getMatchProcessesForContentBlock = (
   triggerSpec: TriggerSpec,
 ) => (
-  contentBlockKey: string,
-  contentBlockText: string,
+  contentBlock: ContentBlock,
   caretOffset: number,
 ): MatchProcess[] => {
+  const contentBlockText = contentBlock.getText();
+  const contentBlockKey = contentBlock.getKey();
   const matchProcesses: MatchProcess[] = [];
   let cursor = 0;
   while (true) {
@@ -50,11 +51,20 @@ const getMatchProcessesForContentBlock = (
     }
     const triggerEnd = triggerStart + triggerSpec.trigger.length;
     if (triggerEnd <= caretOffset) {
+      // TODO we should probably only exclude entities on a specific list
+      const interveningEntity = (() => {
+        for (let i = triggerStart; i < caretOffset; i++) {
+          if (contentBlock.getEntityAt(i) !== null) {
+            return true;
+          }
+        }
+        return false;
+      })();
       const beforeTrigger = contentBlockText.slice(0, triggerStart);
       const matchString = contentBlockText.slice(triggerEnd, caretOffset);
       const beforeGood = beforeTrigger.search(triggerSpec.beforeTriggerAllowed) !== -1;
       const matchStringGood = matchString.search(triggerSpec.matchStringAllowed) !== -1;
-      if (beforeGood && matchStringGood) {
+      if (!interveningEntity && beforeGood && matchStringGood) {
         const matchProcess = {
           triggerSpec,
           contentBlockKey,
@@ -74,8 +84,8 @@ const getMatchProcessesForCurrentContentBlock = (triggerSpec: TriggerSpec) => (e
   if (selectionState.isCollapsed()) {
     const contentBlockKey = selectionState.getStartKey();
     const caretOffset = selectionState.getStartOffset();
-    const contentBlockText = editorState.getCurrentContent().getBlockForKey(contentBlockKey).getText();
-    return getMatchProcessesForContentBlock(triggerSpec)(contentBlockKey, contentBlockText, caretOffset);
+    const contentBlock = editorState.getCurrentContent().getBlockForKey(contentBlockKey);
+    return getMatchProcessesForContentBlock(triggerSpec)(contentBlock, caretOffset);
   }
   return [];
 };
