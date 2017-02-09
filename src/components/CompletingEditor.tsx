@@ -348,21 +348,9 @@ const finishCompletion = (
       undefined,
       entityKey,
     );
-    // TODO better way to "not continue" a mutable entity?
-    const contentStateWithBoundary = (() => {
-      if (completionSpec.entityMutability === "MUTABLE") {
-        return Modifier.insertText(
-          contentStateWithCompletion,
-          contentStateWithCompletion.getSelectionAfter(),
-          "\u200B",
-        );
-      } else {
-        return contentStateWithCompletion;
-      }
-    })();
     // TODO use EditorState.push for better undo/redo UX
-    const editorState1 = EditorState.set(editorState, {currentContent: contentStateWithBoundary});
-    const editorState2 = EditorState.forceSelection(editorState1, contentStateWithBoundary.getSelectionAfter());
+    const editorState1 = EditorState.set(editorState, {currentContent: contentStateWithCompletion});
+    const editorState2 = EditorState.forceSelection(editorState1, contentStateWithCompletion.getSelectionAfter());
     return editorState2;
   }
   return null;
@@ -508,26 +496,30 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   // TODO this is currently special-casing hashtag, make it generally configurable
   private handleBeforeInput = (chars: string): DraftHandleValue => {
     if (chars === " ") {
-      const activeCompletionSpec = getCompletionSpec(this.props.completionSpecs, this.state.activeMatchProcess);
-      if (activeCompletionSpec !== null && activeCompletionSpec.entityType === "hashtag") {
-        const editorState1 = finishCompletion(
-          this.props.completionSpecs,
-          this.state.activeMatchProcess,
-          this.state.selectedIndex,
-          this.state.editorState,
-        );
-        if (editorState1 !== null) {
-          const contentStateWithAppendedSpace = Modifier.insertText(
-            editorState1.getCurrentContent(),
-            editorState1.getSelection(),
-            " ",
+      const editorState = (() => {
+        const activeCompletionSpec = getCompletionSpec(this.props.completionSpecs, this.state.activeMatchProcess);
+        if (activeCompletionSpec !== null && activeCompletionSpec.entityType === "hashtag") {
+          return finishCompletion(
+            this.props.completionSpecs,
+            this.state.activeMatchProcess,
+            this.state.selectedIndex,
+            this.state.editorState,
           );
-          const editorState2 = EditorState.set(editorState1, {currentContent: contentStateWithAppendedSpace});
-          const afterSpaceSelection = contentStateWithAppendedSpace.getSelectionAfter();
-          const editorState3 = EditorState.forceSelection(editorState2, afterSpaceSelection);
-          this.onEditorStateChange(editorState3);
-          return "handled";
+        } else {
+          return this.state.editorState;
         }
+      })();
+      if (editorState !== null && editorState.getSelection().isCollapsed()) {
+        const contentStateWithAppendedSpace = Modifier.insertText(
+          editorState.getCurrentContent(),
+          editorState.getSelection(),
+          " ",
+        );
+        const editorState1 = EditorState.set(editorState, {currentContent: contentStateWithAppendedSpace});
+        const afterSpaceSelection = contentStateWithAppendedSpace.getSelectionAfter();
+        const editorState2 = EditorState.forceSelection(editorState1, afterSpaceSelection);
+        this.onEditorStateChange(editorState2);
+        return "handled";
       }
     }
     return "not-handled";

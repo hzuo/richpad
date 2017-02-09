@@ -4,17 +4,31 @@
 }
 
 .editor-container .active-process-marker {
-  border: 1px solid lightskyblue;
+  border: 1px solid #dce6f8;
 }
 
 .editor-container .entity-marker {
-  background-color: lightskyblue;
+  background-color: #dce6f8;
 }
 
 .completions-container {
-  background-color: gray;
+  background-color: white;
+  color: black;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  box-shadow: 0 0 0 1px rgba(16, 22, 26, 0.1), 0 1px 1px rgba(16, 22, 26, 0.2), 0 2px 6px rgba(16, 22, 26, 0.2);
+  border-radius: 2px;
+}
+
+.completions-container .completion-item {
+  padding: 5px;
+}
+
+.completions-container .completion-item .completion-text {
+
 }
 
 .completions-container .selected-item {
-  background-color: darkgray;
+  background-color: #3B5998;
+  color: white;
 }
