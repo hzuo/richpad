@@ -233,6 +233,7 @@ export interface CompletionSpec {
   completionItems: CompletionItem[];
   entityType: string;
   entityMutability: DraftEntityMutability;
+  keepTrigger: boolean;
 }
 
 export interface CompletionSpecs {
@@ -322,7 +323,14 @@ const finishCompletion = (
       focusOffset: matchProcess.caretOffset,
     }) as SelectionState;
     const matchingCompletionItems = getMatchingCompletionItems(completionSpecs, matchProcess);
-    const text = matchingCompletionItems[selectedIndex].text;
+    const text = (() => {
+      const completionText = matchingCompletionItems[selectedIndex].text;
+      if (completionSpec.keepTrigger) {
+        return `${completionSpec.triggerSpec.trigger}${completionText}`;
+      } else {
+        return completionText;
+      }
+    })();
     const contentStateWithCompletion = Modifier.replaceText(
       contentStateWithEntity,
       rangeToReplace,

@@ -32,6 +32,7 @@ const completionSpecs: CompletionSpecs = {
     ],
     entityType: "mention",
     entityMutability: "SEGMENTED",
+    keepTrigger: true,
   },
   hashtag: {
     triggerSpec: (() => {
@@ -42,12 +43,14 @@ const completionSpecs: CompletionSpecs = {
     completionItems: [],
     entityType: "hashtag",
     entityMutability: "MUTABLE",
+    keepTrigger: true,
   },
   relation: {
     triggerSpec: mkDefaultSpec("<>"),
     completionItems: [],
     entityType: "relation",
     entityMutability: "IMMUTABLE",
+    keepTrigger: true,
   },
 };
 
