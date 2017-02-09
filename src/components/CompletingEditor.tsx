@@ -358,12 +358,6 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     );
   }
 
-  private setActiveProcessClientRectThunk = (clientRectThunk: ClientRectThunk) => {
-    this.setState({
-      activeMatchProcessClientRectThunk: clientRectThunk,
-    });
-  }
-
   private onEditorStateChange = (editorState: EditorState): void => {
     const decorators = [];
     const matchProcesses = _.flatMap(
@@ -431,5 +425,11 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
         this.onEditorStateChange(newEditorState);
       }
     }
+  }
+
+  private setActiveProcessClientRectThunk = (clientRectThunk: ClientRectThunk) => {
+    this.setState({
+      activeMatchProcessClientRectThunk: clientRectThunk,
+    });
   }
 }
