@@ -7,6 +7,10 @@
   border: 1px solid lightskyblue;
 }
 
+.editor-container .entity-marker {
+  background-color: lightskyblue;
+}
+
 .completions-container {
   background-color: gray;
 }

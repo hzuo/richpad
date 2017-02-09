@@ -1,4 +1,15 @@
-import {CompositeDecorator, ContentBlock, ContentState, Editor, EditorState, Modifier, SelectionState} from "draft-js";
+import {
+  CharacterMetadata,
+  CompositeDecorator,
+  ContentBlock,
+  ContentState,
+  Editor,
+  EditorState,
+  Entity,
+  EntityInstance,
+  Modifier,
+  SelectionState,
+} from "draft-js";
 import * as _ from "lodash";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
@@ -73,8 +84,10 @@ const getActiveMatchProcess = (matchProcesses: MatchProcess[]): MatchProcess => 
   _.maxBy(matchProcesses, (matchProcess) => matchProcess.triggerOffset)
 );
 
+type RangeFn = (start: number, end: number) => void;
+
 const mkStrategyForMatchProcess = (matchProcess: MatchProcess) => (
-  (contentBlock: ContentBlock, callback: (start: number, end: number) => void): void => {
+  (contentBlock: ContentBlock, callback: RangeFn): void => {
     if (contentBlock.getKey() === matchProcess.contentBlockKey) {
       const {triggerOffset, caretOffset} = matchProcess;
       callback(triggerOffset, caretOffset);
@@ -192,6 +205,45 @@ class Completions extends React.Component<CompletionsProps, CompletionsState> {
     );
   }
 }
+
+const mkStrategyForEntityType = (entityType: string) => {
+  // TODO do we absolutely have to special case this
+  // i.e. do more research on mutable entities (and how to make them stop)
+  if (entityType === "hashtag") {
+    return (
+      (contentBlock: ContentBlock, callback: RangeFn): void => {
+        const regex = /(^|.*\s)#[^\s]+/g;
+        const text = contentBlock.getText();
+        while (true) {
+          const matchArr = regex.exec(text);
+          if (matchArr === null) {
+            break;
+          }
+          const start = matchArr.index;
+          callback(start, start + matchArr[0].length);
+        }
+      }
+    );
+  } else {
+    return (
+      (contentBlock: ContentBlock, callback: RangeFn, contentState: ContentState): void => {
+        contentBlock.findEntityRanges((characterMetadata) => {
+          const entityKey = characterMetadata.getEntity();
+          if (entityKey) {
+            // TODO these draft typings need work...
+            const entityInstance: EntityInstance = (contentState as any).getEntity(entityKey);
+            return entityInstance.getType() === entityType;
+          }
+          return false;
+        }, callback);
+      }
+    );
+  }
+};
+
+const EntityMarker: React.StatelessComponent<{}> = (props) => (
+  <span className="entity-marker">{props.children}</span>
+);
 
 // the draft typings don't export this type
 export type DraftEntityMutability = "MUTABLE" | "IMMUTABLE" | "SEGMENTED";
@@ -359,9 +411,16 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   }
 
   private onEditorStateChange = (editorState: EditorState): void => {
-    const decorators = [];
+    const {completionSpecs} = this.props;
+    const decorators: Array<{ strategy: any; component: any; }> = [];
+    _.forEach(completionSpecs, (completionSpec) => {
+      decorators.push({
+        strategy: mkStrategyForEntityType(completionSpec.entityType),
+        component: EntityMarker,
+      });
+    });
     const matchProcesses = _.flatMap(
-      getTriggerSpecs(this.props.completionSpecs),
+      getTriggerSpecs(completionSpecs),
       (triggerSpec) => getMatchProcessesForCurrentContentBlock(triggerSpec)(editorState),
     );
     const activeMatchProcess = _.isEmpty(matchProcesses) ? null : getActiveMatchProcess(matchProcesses);
@@ -375,7 +434,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     const compositeDecorator = new CompositeDecorator(decorators);
     const decoratedEditorState = EditorState.set(editorState, {decorator: compositeDecorator});
     const selectedIndex = activeMatchProcess === null ? 0 : boundSelectedIndex(
-      this.props.completionSpecs,
+      completionSpecs,
       activeMatchProcess,
       this.state.selectedIndex,
     );
