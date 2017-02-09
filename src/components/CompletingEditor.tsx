@@ -206,40 +206,19 @@ class Completions extends React.Component<CompletionsProps, CompletionsState> {
   }
 }
 
-const mkStrategyForEntityType = (entityType: string) => {
-  // TODO do we absolutely have to special case this
-  // i.e. do more research on mutable entities (and how to make them stop)
-  if (entityType === "hashtag") {
-    return (
-      (contentBlock: ContentBlock, callback: RangeFn): void => {
-        const regex = /(^|.*\s)#[^\s]+/g;
-        const text = contentBlock.getText();
-        while (true) {
-          const matchArr = regex.exec(text);
-          if (matchArr === null) {
-            break;
-          }
-          const start = matchArr.index;
-          callback(start, start + matchArr[0].length);
-        }
+const mkStrategyForEntityType = (entityType: string) => (
+  (contentBlock: ContentBlock, callback: RangeFn, contentState: ContentState): void => {
+    contentBlock.findEntityRanges((characterMetadata) => {
+      const entityKey = characterMetadata.getEntity();
+      if (entityKey) {
+        // TODO these draft typings are terrible...
+        const entityInstance: EntityInstance = (contentState as any).getEntity(entityKey);
+        return entityInstance.getType() === entityType;
       }
-    );
-  } else {
-    return (
-      (contentBlock: ContentBlock, callback: RangeFn, contentState: ContentState): void => {
-        contentBlock.findEntityRanges((characterMetadata) => {
-          const entityKey = characterMetadata.getEntity();
-          if (entityKey) {
-            // TODO these draft typings need work...
-            const entityInstance: EntityInstance = (contentState as any).getEntity(entityKey);
-            return entityInstance.getType() === entityType;
-          }
-          return false;
-        }, callback);
-      }
-    );
+      return false;
+    }, callback);
   }
-};
+);
 
 const EntityMarker: React.StatelessComponent<{}> = (props) => (
   <span className="entity-marker">{props.children}</span>
