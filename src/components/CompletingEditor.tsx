@@ -109,14 +109,13 @@ type ClientRectThunk = () => ClientRect | null;
 
 const mkActiveProcessMarker = (setActiveProcessClientRectThunk: (clientRectThunk: ClientRectThunk) => void) => (
   class extends React.Component<{}, {}> {
-    private markerRef: React.ReactInstance;
-
     public componentDidMount() {
       setActiveProcessClientRectThunk(() => {
-        if (this.markerRef) {
-          const markerElement = ReactDOM.findDOMNode(this.markerRef);
-          if (markerElement) {
-            return markerElement.getBoundingClientRect();
+        const markerElement = this.refs["marker-element"];
+        if (markerElement) {
+          const markerDOMNode = ReactDOM.findDOMNode(markerElement);
+          if (markerDOMNode) {
+            return markerDOMNode.getBoundingClientRect();
           }
         }
         return null;
@@ -131,15 +130,11 @@ const mkActiveProcessMarker = (setActiveProcessClientRectThunk: (clientRectThunk
       return (
         <span
           className="active-process-marker"
-          ref={this.setMarkerRef}
+          ref="marker-element"
         >
           {this.props.children}
         </span>
       );
-    }
-
-    private setMarkerRef = (marker: React.ReactInstance) => {
-      this.markerRef = marker;
     }
   }
 );
