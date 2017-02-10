@@ -105,35 +105,30 @@ const mkStrategyForMatchProcess = (matchProcess: MatchProcess) => (
   }
 );
 
-type ClientRectThunk = () => ClientRect | null;
-
-interface ActiveProcessMarkerProps {
-  setActiveProcessClientRectThunk: (clientRectThunk: ClientRectThunk) => void;
+interface ActiveMatchProcessMarkerProps {
+  setActiveMatchProcessClientRect: (clientRect: ClientRect | null) => void;
 };
 
-class ActiveProcessMarker extends React.Component<ActiveProcessMarkerProps, {}> {
+class ActiveMatchProcessMarker extends React.Component<ActiveMatchProcessMarkerProps, {}> {
   private markerElement: React.ReactInstance;
 
   public componentDidMount() {
-    this.props.setActiveProcessClientRectThunk(() => {
-      if (this.markerElement) {
-        const markerDOMNode = ReactDOM.findDOMNode(this.markerElement);
-        if (markerDOMNode) {
-          return markerDOMNode.getBoundingClientRect();
-        }
+    if (this.markerElement) {
+      const markerDOMNode = ReactDOM.findDOMNode(this.markerElement);
+      if (markerDOMNode) {
+        this.props.setActiveMatchProcessClientRect(markerDOMNode.getBoundingClientRect());
       }
-      return null;
-    });
+    }
   }
 
   public componentWillUnmount() {
-    this.props.setActiveProcessClientRectThunk(() => null);
+    this.props.setActiveMatchProcessClientRect(null);
   }
 
   public render() {
     return (
       <span
-        className="active-process-marker"
+        className="active-match-process-marker"
         ref={this.setMarkerElement}
       >
         {this.props.children}
@@ -153,70 +148,44 @@ interface CompletionItem {
 interface CompletionsProps {
   completionItems: CompletionItem[];
   selectedIndex: number;
-  activeMatchProcessClientRectThunk: ClientRectThunk;
-}
-
-interface CompletionsState {
   activeMatchProcessClientRect: ClientRect | null;
 }
 
-class Completions extends React.Component<CompletionsProps, CompletionsState> {
-  constructor(props: CompletionsProps) {
-    super(props);
-    this.state = {
-      activeMatchProcessClientRect: this.props.activeMatchProcessClientRectThunk(),
-    };
+const Completions: React.StatelessComponent<CompletionsProps> = (props) => {
+  const {completionItems, selectedIndex, activeMatchProcessClientRect} = props;
+  if (activeMatchProcessClientRect === null) {
+    return <noscript/>;
   }
-
-  public componentDidMount() {
-    this.setState({
-      activeMatchProcessClientRect: this.props.activeMatchProcessClientRectThunk(),
-    });
-  }
-
-  public componentWillReceiveProps(nextProps: CompletionsProps) {
-    this.setState({
-      activeMatchProcessClientRect: nextProps.activeMatchProcessClientRectThunk(),
-    });
-  }
-
-  public render() {
-    const {completionItems, selectedIndex} = this.props;
-    const {activeMatchProcessClientRect} = this.state;
-    if (activeMatchProcessClientRect === null) {
-      return <noscript/>;
-    }
-    const style = {
-      position: "absolute",
-      top: activeMatchProcessClientRect.bottom,
-      left: activeMatchProcessClientRect.left,
-    };
-    const completionItemElements = _.map(completionItems, (completionItem, index) => {
-      const extraClassName = (() => {
-        if (selectedIndex === index) {
-          return "selected-item";
-        } else {
-          return "";
-        }
-      })();
-      return (
-        <div className={`completion-item ${extraClassName}`} key={index}>
-          <span className="completion-text">
-            {/* nbsp in case completionItem.text is empty */}
-            &nbsp;{completionItem.text}&nbsp;
-          </span>
-        </div>
-      );
-    });
+  const style = {
+    position: "absolute",
+    top: activeMatchProcessClientRect.bottom,
+    left: activeMatchProcessClientRect.left,
+  };
+  const completionItemElements = _.map(completionItems, (completionItem, index) => {
+    const extraClassName = (() => {
+      if (selectedIndex === index) {
+        return "selected-item";
+      } else {
+        return "";
+      }
+    })();
     return (
-      <div style={style}>
-        <div className="completions-container">
-          {completionItemElements}
-        </div>
+      <div className={`completion-item ${extraClassName}`} key={index}>
+        <span className="completion-text">
+          {/* nbsp in case completionItem.text is empty */}
+          &nbsp;{completionItem.text}&nbsp;
+        </span>
       </div>
     );
-  }
-}
+  });
+  return (
+    <div style={style}>
+      <div className="completions-container">
+        {completionItemElements}
+      </div>
+    </div>
+  );
+};
 
 const mkStrategyForEntityType = (entityType: string) => (
   (contentBlock: ContentBlock, callback: RangeFn, contentState: ContentState): void => {
@@ -259,7 +228,7 @@ export interface CompletingEditorProps {
 export interface CompletingEditorState {
   editorState: EditorState;
   activeMatchProcess: MatchProcess | null;
-  activeMatchProcessClientRectThunk: ClientRectThunk;
+  activeMatchProcessClientRect: ClientRect | null;
   selectedIndex: number;
 }
 
@@ -364,14 +333,14 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     this.state = {
       editorState: EditorState.createEmpty(),
       activeMatchProcess: null,
-      activeMatchProcessClientRectThunk: () => null,
+      activeMatchProcessClientRect: null,
       selectedIndex: 0,
     };
   }
 
   public render() {
     const {completionSpecs} = this.props;
-    const {editorState, activeMatchProcess, activeMatchProcessClientRectThunk, selectedIndex} = this.state;
+    const {editorState, activeMatchProcess, activeMatchProcessClientRect, selectedIndex} = this.state;
     const completionsElement = (() => {
       if (activeMatchProcess) {
         const matchingCompletionItems = getMatchingCompletionItems(this.props.completionSpecs, activeMatchProcess);
@@ -379,7 +348,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
           <Completions
             completionItems={matchingCompletionItems}
             selectedIndex={selectedIndex}
-            activeMatchProcessClientRectThunk={activeMatchProcessClientRectThunk}
+            activeMatchProcessClientRect={activeMatchProcessClientRect}
           />
         );
       }
@@ -438,10 +407,10 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     if (activeMatchProcess !== null) {
       const decoratorForActiveMatchProcess = {
         strategy: mkStrategyForMatchProcess(activeMatchProcess),
-        component: ActiveProcessMarker,
+        component: ActiveMatchProcessMarker,
         props: {
-          setActiveProcessClientRectThunk: this.setActiveProcessClientRectThunk
-        } as ActiveProcessMarkerProps
+          setActiveMatchProcessClientRect: this.setActiveMatchProcessClientRect,
+        } as ActiveMatchProcessMarkerProps,
       };
       decorators.push(decoratorForActiveMatchProcess);
     }
@@ -538,9 +507,9 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     return "not-handled";
   }
 
-  private setActiveProcessClientRectThunk = (clientRectThunk: ClientRectThunk) => {
+  private setActiveMatchProcessClientRect = (clientRect: ClientRect | null) => {
     this.setState({
-      activeMatchProcessClientRectThunk: clientRectThunk,
+      activeMatchProcessClientRect: clientRect,
     });
   }
 }
