@@ -107,42 +107,44 @@ const mkStrategyForMatchProcess = (matchProcess: MatchProcess) => (
 
 type ClientRectThunk = () => ClientRect | null;
 
-const mkActiveProcessMarker = (setActiveProcessClientRectThunk: (clientRectThunk: ClientRectThunk) => void) => (
-  class extends React.Component<{}, {}> {
-    private markerElement: React.ReactInstance;
+interface ActiveProcessMarkerProps {
+  setActiveProcessClientRectThunk: (clientRectThunk: ClientRectThunk) => void;
+};
 
-    public componentDidMount() {
-      setActiveProcessClientRectThunk(() => {
-        if (this.markerElement) {
-          const markerDOMNode = ReactDOM.findDOMNode(this.markerElement);
-          if (markerDOMNode) {
-            return markerDOMNode.getBoundingClientRect();
-          }
+class ActiveProcessMarker extends React.Component<ActiveProcessMarkerProps, {}> {
+  private markerElement: React.ReactInstance;
+
+  public componentDidMount() {
+    this.props.setActiveProcessClientRectThunk(() => {
+      if (this.markerElement) {
+        const markerDOMNode = ReactDOM.findDOMNode(this.markerElement);
+        if (markerDOMNode) {
+          return markerDOMNode.getBoundingClientRect();
         }
-        return null;
-      });
-    }
-
-    public componentWillUnmount() {
-      setActiveProcessClientRectThunk(() => null);
-    }
-
-    public render() {
-      return (
-        <span
-          className="active-process-marker"
-          ref={this.setMarkerElement}
-        >
-          {this.props.children}
-        </span>
-      );
-    }
-
-    private setMarkerElement = (markerElement: React.ReactInstance) => {
-      this.markerElement = markerElement;
-    }
+      }
+      return null;
+    });
   }
-);
+
+  public componentWillUnmount() {
+    this.props.setActiveProcessClientRectThunk(() => null);
+  }
+
+  public render() {
+    return (
+      <span
+        className="active-process-marker"
+        ref={this.setMarkerElement}
+      >
+        {this.props.children}
+      </span>
+    );
+  }
+
+  private setMarkerElement = (markerElement: React.ReactInstance) => {
+    this.markerElement = markerElement;
+  }
+}
 
 interface CompletionItem {
   text: string;
@@ -421,7 +423,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
 
   private onEditorStateChange = (editorState: EditorState): void => {
     const {completionSpecs} = this.props;
-    const decorators: Array<{ strategy: any; component: any; }> = [];
+    const decorators: Array<{ strategy: any; component: any; props?: any; }> = [];
     _.forEach(completionSpecs, (completionSpec) => {
       decorators.push({
         strategy: mkStrategyForEntityType(completionSpec.entityType),
@@ -436,7 +438,10 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     if (activeMatchProcess !== null) {
       const decoratorForActiveMatchProcess = {
         strategy: mkStrategyForMatchProcess(activeMatchProcess),
-        component: mkActiveProcessMarker(this.setActiveProcessClientRectThunk),
+        component: ActiveProcessMarker,
+        props: {
+          setActiveProcessClientRectThunk: this.setActiveProcessClientRectThunk
+        } as ActiveProcessMarkerProps
       };
       decorators.push(decoratorForActiveMatchProcess);
     }
