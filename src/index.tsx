@@ -24,10 +24,13 @@ const completionSpecs: CompletionSpecs = {
     triggerSpec: mkDefaultSpec("@"),
     completionItems: [
       {
+        text: "Albert Slawinski",
+      },
+      {
         text: "Jacob Cole",
       },
       {
-        text: "Albert Slawinski",
+        text: "Jacov Kolantarov",
       },
     ],
     entityType: "mention",
@@ -40,14 +43,49 @@ const completionSpecs: CompletionSpecs = {
       spec.matchStringAllowed = /^[^\s]*$/;
       return spec;
     })(),
-    completionItems: [],
+    completionItems: [
+      {
+        text: "idea",
+      },
+      {
+        text: "ideal",
+      },
+      {
+        text: "DeleteUber",
+      },
+      {
+        text: "BlackLivesMatter",
+      },
+      {
+        text: "JeSuisParis",
+      },
+      {
+        text: "Brexit",
+      },
+      {
+        text: "Calexit",
+      },
+    ],
     entityType: "hashtag",
     entityMutability: "MUTABLE",
     keepTrigger: true,
   },
   relation: {
     triggerSpec: mkDefaultSpec("<>"),
-    completionItems: [],
+    completionItems: [
+      {
+        text: "design is about how things work",
+      },
+      {
+        text: "food is great",
+      },
+      {
+        text: "food/group cooking coordination app for dorms",
+      },
+      {
+        text: "foodslists.tk -- Google doc of foods people eat",
+      },
+    ],
     entityType: "relation",
     entityMutability: "IMMUTABLE",
     keepTrigger: true,
