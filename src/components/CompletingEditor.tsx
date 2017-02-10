@@ -20,7 +20,7 @@ export interface TriggerSpec {
   matchStringAllowed: RegExp;
 }
 
-export const mkDefaultSpec = (trigger: string): TriggerSpec => ({
+export const mkDefaultTriggerSpec = (trigger: string): TriggerSpec => ({
   trigger,
   beforeTriggerAllowed: /(^|.*\s)$/,
   matchStringAllowed: /.*/,

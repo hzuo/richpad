@@ -1,7 +1,7 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
-import {CompletingEditor, CompletionSpecs, mkDefaultSpec} from "./components/CompletingEditor";
+import {CompletingEditor, CompletionSpecs, mkDefaultTriggerSpec} from "./components/CompletingEditor";
 
 import "./index.css";
 
@@ -11,7 +11,7 @@ declare const __DEV__: boolean; // from webpack
 
 const completionSpecs: CompletionSpecs = {
   mention: {
-    triggerSpec: mkDefaultSpec("@"),
+    triggerSpec: mkDefaultTriggerSpec("@"),
     completionItems: [
       {
         text: "Albert Slawinski",
@@ -29,7 +29,7 @@ const completionSpecs: CompletionSpecs = {
   },
   hashtag: {
     triggerSpec: (() => {
-      const spec = mkDefaultSpec("#");
+      const spec = mkDefaultTriggerSpec("#");
       spec.matchStringAllowed = /^[^\s]*$/;
       return spec;
     })(),
@@ -61,7 +61,7 @@ const completionSpecs: CompletionSpecs = {
     keepTrigger: true,
   },
   relation: {
-    triggerSpec: mkDefaultSpec("<>"),
+    triggerSpec: mkDefaultTriggerSpec("<>"),
     completionItems: [
       {
         text: "design is about how things work",
