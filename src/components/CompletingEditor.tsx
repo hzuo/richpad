@@ -157,10 +157,12 @@ interface CompletionsProps {
   completionItems: CompletionItem[];
   selectedIndex: number;
   activeMatchProcessClientRect: ClientRect | null;
+  setSelectedIndex: (selectedIndex: number) => void;
+  finishCompletion: () => void;
 }
 
 const Completions: React.StatelessComponent<CompletionsProps> = (props) => {
-  const {completionItems, selectedIndex, activeMatchProcessClientRect} = props;
+  const {completionItems, selectedIndex, activeMatchProcessClientRect, setSelectedIndex, finishCompletion} = props;
   if (activeMatchProcessClientRect === null) {
     return <noscript/>;
   }
@@ -178,8 +180,14 @@ const Completions: React.StatelessComponent<CompletionsProps> = (props) => {
         return "";
       }
     })();
+    const onMouseEnter = () => setSelectedIndex(index);
     return (
-      <div className={`completion-item ${extraClassName}`} key={index}>
+      <div
+        className={`completion-item ${extraClassName}`}
+        key={index}
+        onMouseEnter={onMouseEnter}
+        onClick={finishCompletion}
+      >
         <span className="completion-text">
           {/* nbsp in case completionItem.text is empty */}
           &nbsp;{completionItem.text}&nbsp;
@@ -358,6 +366,8 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
             completionItems={matchingCompletionItems}
             selectedIndex={selectedIndex}
             activeMatchProcessClientRect={activeMatchProcessClientRect}
+            setSelectedIndex={this.setSelectedIndex}
+            finishCompletion={this.finishCompletion}
           />
         );
       }
@@ -388,8 +398,8 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
             onChange={this.onEditorStateChange}
             onUpArrow={this.onUpArrow}
             onDownArrow={this.onDownArrow}
-            onTab={this.onTab}
-            handleReturn={this.handleReturn}
+            onTab={this.handleFinishCompletion}
+            handleReturn={this.handleFinishCompletion}
             handleBeforeInput={this.handleBeforeInput}
           />
         </div>
@@ -437,33 +447,32 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     });
   }
 
+  private setSelectedIndex = (selectedIndex: number) => {
+    this.setState({
+      selectedIndex: boundSelectedIndex(
+        this.props.completionSpecs,
+        this.state.activeMatchProcess,
+        selectedIndex,
+      ),
+    });
+  }
+
   private onUpArrow = (e: React.KeyboardEvent<{}>) => {
     if (this.state.activeMatchProcess !== null) {
       e.preventDefault();
-      this.setState({
-        selectedIndex: boundSelectedIndex(
-          this.props.completionSpecs,
-          this.state.activeMatchProcess,
-          this.state.selectedIndex - 1,
-        ),
-      });
+      this.setSelectedIndex(this.state.selectedIndex - 1);
     }
   }
 
   private onDownArrow = (e: React.KeyboardEvent<{}>) => {
     if (this.state.activeMatchProcess !== null) {
       e.preventDefault();
-      this.setState({
-        selectedIndex: boundSelectedIndex(
-          this.props.completionSpecs,
-          this.state.activeMatchProcess,
-          this.state.selectedIndex + 1,
-        ),
-      });
+      this.setSelectedIndex(this.state.selectedIndex + 1);
     }
   }
 
-  private handleReturn = (e: React.KeyboardEvent<{}>): DraftHandleValue => {
+  // TODO rename me
+  private finishCompletion = () => {
     if (this.state.activeMatchProcess !== null) {
       const newEditorState = finishCompletion(
         this.props.completionSpecs,
@@ -472,16 +481,20 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
         this.state.editorState,
       );
       if (newEditorState !== null) {
-        e.preventDefault();
         this.onEditorStateChange(newEditorState);
-        return "handled";
+        return true;
       }
     }
-    return "not-handled";
+    return false;
   }
 
-  private onTab = (e: React.KeyboardEvent<{}>) => {
-    this.handleReturn(e);
+  private handleFinishCompletion = (e: React.KeyboardEvent<{}>): DraftHandleValue => {
+    if (this.finishCompletion()) {
+      e.preventDefault();
+      return "handled";
+    } else {
+      return "not-handled";
+    }
   }
 
   // TODO this is currently special-casing hashtag, make it generally configurable
