@@ -109,11 +109,12 @@ type ClientRectThunk = () => ClientRect | null;
 
 const mkActiveProcessMarker = (setActiveProcessClientRectThunk: (clientRectThunk: ClientRectThunk) => void) => (
   class extends React.Component<{}, {}> {
+    private markerElement: React.ReactInstance;
+
     public componentDidMount() {
       setActiveProcessClientRectThunk(() => {
-        const markerElement = this.refs["marker-element"];
-        if (markerElement) {
-          const markerDOMNode = ReactDOM.findDOMNode(markerElement);
+        if (this.markerElement) {
+          const markerDOMNode = ReactDOM.findDOMNode(this.markerElement);
           if (markerDOMNode) {
             return markerDOMNode.getBoundingClientRect();
           }
@@ -130,11 +131,15 @@ const mkActiveProcessMarker = (setActiveProcessClientRectThunk: (clientRectThunk
       return (
         <span
           className="active-process-marker"
-          ref="marker-element"
+          ref={this.setMarkerElement}
         >
           {this.props.children}
         </span>
       );
+    }
+
+    private setMarkerElement = (markerElement: React.ReactInstance) => {
+      this.markerElement = markerElement;
     }
   }
 );
@@ -378,15 +383,23 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
       }
       return null;
     })();
-    const matchProcessesForSpecs = _.map(
-      getTriggerSpecs(this.props.completionSpecs),
-      (spec) => getMatchProcessesForCurrentContentBlock(spec)(editorState),
-    );
-    const printMatchProcesses = _.map(matchProcessesForSpecs, (matchProcessesForSpec, i) => (
-      <pre key={i}>
-        {JSON.stringify(matchProcessesForSpec, null, 2)}
-      </pre>
-    ));
+    const debugMatchProcesses = (() => {
+      if ((window as any).__DEV__) {
+        const triggerSpecs = getTriggerSpecs(this.props.completionSpecs);
+        const matchProcessesForSpecs = _.map(
+          triggerSpecs,
+          (spec) => getMatchProcessesForCurrentContentBlock(spec)(editorState),
+        );
+        const printMatchProcesses = _.map(matchProcessesForSpecs, (matchProcessesForSpec, i) => (
+          <pre key={i}>
+            {JSON.stringify(matchProcessesForSpec, null, 2)}
+          </pre>
+        ));
+        return printMatchProcesses;
+      } else {
+        return null;
+      }
+    })();
     return (
       <div>
         <div className="editor-container">
@@ -401,7 +414,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
           />
         </div>
         {completionsElement}
-        {printMatchProcesses}
+        {debugMatchProcesses}
       </div>
     );
   }

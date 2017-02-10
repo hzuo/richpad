@@ -12,6 +12,8 @@ import "./index.css";
 
 declare const __DEV__: boolean; // from webpack
 
+(window as any).__DEV__ = __DEV__;
+
 const middleware = [];
 if (__DEV__) {
   const logger = createLogger();
