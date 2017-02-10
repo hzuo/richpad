@@ -192,7 +192,7 @@ const mkStrategyForEntityType = (entityType: string) => (
     contentBlock.findEntityRanges((characterMetadata) => {
       const entityKey = characterMetadata.getEntity();
       if (entityKey) {
-        // TODO these draft typings are terrible...
+        // these draft typings are terrible...
         const entityInstance: EntityInstance = (contentState as any).getEntity(entityKey);
         return entityInstance.getType() === entityType;
       }
@@ -292,8 +292,8 @@ const finishCompletion = (
 ): EditorState | null => {
   const completionSpec = getCompletionSpec(completionSpecs, matchProcess);
   if (matchProcess !== null && completionSpec !== null) {
-    // TODO wtf these typings are messed up
     const contentState = editorState.getCurrentContent();
+    // wtf these typings are messed up
     const contentStateWithEntity: ContentState = (contentState as any).createEntity(
       completionSpec.entityType,
       completionSpec.entityMutability,
@@ -481,6 +481,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
       const editorState = (() => {
         const activeCompletionSpec = getCompletionSpec(this.props.completionSpecs, this.state.activeMatchProcess);
         if (activeCompletionSpec !== null && activeCompletionSpec.entityType === "hashtag") {
+          // TODO we don't want to use selectedIndex here
           return finishCompletion(
             this.props.completionSpecs,
             this.state.activeMatchProcess,
