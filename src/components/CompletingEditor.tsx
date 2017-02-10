@@ -54,7 +54,7 @@ const getMatchProcessesForContentBlock = (
       // TODO we should probably only exclude entities on a specific list
       const interveningEntity = (() => {
         for (let i = triggerStart; i < caretOffset; i++) {
-          if (contentBlock.getEntityAt(i) !== null) {
+          if (contentBlock.getEntityAt(i)) {
             return true;
           }
         }
@@ -116,8 +116,8 @@ class ActiveMatchProcessMarker extends React.Component<ActiveMatchProcessMarkerP
     this.updateMarkerClientRect(this.props);
   }
 
-  public componentWillReceiveProps(nextProps: ActiveMatchProcessMarkerProps) {
-    this.updateMarkerClientRect(nextProps);
+  public componentDidUpdate() {
+    this.updateMarkerClientRect(this.props);
   }
 
   public componentWillUnmount() {
