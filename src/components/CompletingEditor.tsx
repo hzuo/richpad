@@ -160,6 +160,7 @@ const Completions: React.StatelessComponent<CompletionsProps> = (props) => {
     position: "absolute",
     top: activeMatchProcessClientRect.bottom,
     left: activeMatchProcessClientRect.left,
+    zIndex: 2,
   };
   const completionItemElements = _.map(completionItems, (completionItem, index) => {
     const extraClassName = (() => {
@@ -481,11 +482,16 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
       const editorState = (() => {
         const activeCompletionSpec = getCompletionSpec(this.props.completionSpecs, this.state.activeMatchProcess);
         if (activeCompletionSpec !== null && activeCompletionSpec.entityType === "hashtag") {
-          // TODO we don't want to use selectedIndex here
+          // TODO this is slightly hacky
+          const selectedIndex = boundSelectedIndex(
+            this.props.completionSpecs,
+            this.state.activeMatchProcess,
+            Number.POSITIVE_INFINITY
+          );
           return finishCompletion(
             this.props.completionSpecs,
             this.state.activeMatchProcess,
-            this.state.selectedIndex,
+            selectedIndex,
             this.state.editorState,
           );
         } else {
