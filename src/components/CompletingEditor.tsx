@@ -113,12 +113,11 @@ class ActiveMatchProcessMarker extends React.Component<ActiveMatchProcessMarkerP
   private markerElement: React.ReactInstance;
 
   public componentDidMount() {
-    if (this.markerElement) {
-      const markerDOMNode = ReactDOM.findDOMNode(this.markerElement);
-      if (markerDOMNode) {
-        this.props.setActiveMatchProcessClientRect(markerDOMNode.getBoundingClientRect());
-      }
-    }
+    this.updateMarkerClientRect(this.props);
+  }
+
+  public componentWillReceiveProps(nextProps: ActiveMatchProcessMarkerProps) {
+    this.updateMarkerClientRect(nextProps);
   }
 
   public componentWillUnmount() {
@@ -134,6 +133,15 @@ class ActiveMatchProcessMarker extends React.Component<ActiveMatchProcessMarkerP
         {this.props.children}
       </span>
     );
+  }
+
+  private updateMarkerClientRect(props: ActiveMatchProcessMarkerProps) {
+    if (this.markerElement) {
+      const markerDOMNode = ReactDOM.findDOMNode(this.markerElement);
+      if (markerDOMNode) {
+        props.setActiveMatchProcessClientRect(markerDOMNode.getBoundingClientRect());
+      }
+    }
   }
 
   private setMarkerElement = (markerElement: React.ReactInstance) => {
@@ -247,7 +255,7 @@ const getCompletionSpec = (
       completionSpecs,
       (completionSpec) => completionSpec.triggerSpec.trigger === matchProcess.triggerSpec.trigger,
     );
-    if (activeCompletionSpec !== undefined) {
+    if (activeCompletionSpec) {
       return activeCompletionSpec;
     }
   }
@@ -343,7 +351,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
     const {completionSpecs} = this.props;
     const {editorState, activeMatchProcess, activeMatchProcessClientRect, selectedIndex} = this.state;
     const completionsElement = (() => {
-      if (activeMatchProcess) {
+      if (activeMatchProcess !== null) {
         const matchingCompletionItems = getMatchingCompletionItems(this.props.completionSpecs, activeMatchProcess);
         return (
           <Completions
@@ -430,7 +438,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   }
 
   private onUpArrow = (e: React.KeyboardEvent<{}>) => {
-    if (this.state.activeMatchProcess) {
+    if (this.state.activeMatchProcess !== null) {
       e.preventDefault();
       this.setState({
         selectedIndex: boundSelectedIndex(
@@ -443,7 +451,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   }
 
   private onDownArrow = (e: React.KeyboardEvent<{}>) => {
-    if (this.state.activeMatchProcess) {
+    if (this.state.activeMatchProcess !== null) {
       e.preventDefault();
       this.setState({
         selectedIndex: boundSelectedIndex(
@@ -456,7 +464,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
   }
 
   private handleReturn = (e: React.KeyboardEvent<{}>): DraftHandleValue => {
-    if (this.state.activeMatchProcess) {
+    if (this.state.activeMatchProcess !== null) {
       const newEditorState = finishCompletion(
         this.props.completionSpecs,
         this.state.activeMatchProcess,
@@ -486,7 +494,7 @@ export class CompletingEditor extends React.Component<CompletingEditorProps, Com
           const selectedIndex = boundSelectedIndex(
             this.props.completionSpecs,
             this.state.activeMatchProcess,
-            Number.POSITIVE_INFINITY
+            Number.POSITIVE_INFINITY,
           );
           return finishCompletion(
             this.props.completionSpecs,
